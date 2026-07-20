@@ -1,0 +1,8 @@
+venv/
+node_modules/
+__pycache__/
+*.pyc
+backend/.env
+frontend/dist/
+frontend/node_modules/
+*.tar.gz
