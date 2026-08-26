@@ -6,3 +6,8 @@ backend/.env
 frontend/dist/
 frontend/node_modules/
 *.tar.gz
+
+# Debug / yedek dosyalar (TREBLE_MAP oturumu, Agustos 2026)
+*.bak_*
+backend/*.png
+backend/patch_*.py

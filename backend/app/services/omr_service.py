@@ -27,7 +27,7 @@ import cv2
 MIDI_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
 
 TREBLE_MAP = {
-    -4:('B',3,59), -3:('C',4,60), -2:('D',4,62), -1:('E',4,64),
+    -4:('A',3,57), -3:('B',3,59), -2:('C',4,60), -1:('D',4,62),
      0:('E',4,64),  1:('F',4,65),  2:('G',4,67),  3:('A',4,69),
      4:('B',4,71),  5:('C',5,72),  6:('D',5,74),  7:('E',5,76),
      8:('F',5,77),  9:('G',5,79), 10:('A',5,81), 11:('B',5,83),
@@ -534,7 +534,7 @@ class PDFOMRService:
     """
 
     TREBLE_MAP = {
-        -4:('B',3,59),-3:('C',4,60),-2:('D',4,62),-1:('E',4,64),
+        -4:('A',3,57),-3:('B',3,59),-2:('C',4,60),-1:('D',4,62),
          0:('E',4,64), 1:('F',4,65), 2:('G',4,67), 3:('A',4,69),
          4:('B',4,71), 5:('C',5,72), 6:('D',5,74), 7:('E',5,76),
          8:('F',5,77), 9:('G',5,79),10:('A',5,81),11:('B',5,83),
@@ -594,8 +594,38 @@ class PDFOMRService:
         except Exception as e:
             print(f'PDF OMR hatası: {e}')
             return None
-
+    
+    def _group_staff_lines(self, groups):
+        staves = []
+        current = []
+        for y in groups:
+            if not current:
+                current = [y]
+                continue
+            if len(current) < 5:
+                avg_gap = np.mean(np.diff(current)) if len(current) > 1 else None
+                gap = y - current[-1]
+                if avg_gap is None or gap <= avg_gap * 1.6:
+                    current.append(y)
+                    continue
+            if len(current) >= 4:
+                if len(current) == 4:
+                    sp = int(np.mean(np.diff(current)))
+                    current.append(current[-1] + sp)
+                staves.append(current[:5])
+            current = [y]
+        if len(current) >= 4:
+            if len(current) == 4:
+                sp = int(np.mean(np.diff(current)))
+                current.append(current[-1] + sp)
+            staves.append(current[:5])
+        return staves
     def _detect_treble_staffs(self, gray):
+        """
+        Grand staff'ta treble clef'leri tespit eder.
+        Treble ve bass arasındaki gap küçük (~200px),
+        sistemler arası gap büyük (~300px+).
+        """
         import numpy as np
         edges = cv2.Canny(gray, 30, 100)
         w = gray.shape[1]
@@ -613,25 +643,43 @@ class PDFOMRService:
                 groups.append(int(np.mean(group)))
                 group = [y]
         groups.append(int(np.mean(group)))
-        all_staffs = [groups[i:i+5] for i in range(0, len(groups), 5) if len(groups[i:i+5])==5]
-        # Treble stafflar: grand staff'ta üst olanlar (çift satırlı sistemde tek/çift indeksler)
-        # Basit yaklaşım: tüm staffları al, spacing tutarlı olanları seç
-        valid = []
-        for s in all_staffs:
-            sp = int(np.mean(np.diff(s)))
-            if 15 <= sp <= 30:  # gerçekçi spacing aralığı
-                valid.append(s)
-        # Grand staff varsa sadece treble'ları al (her 2'den 1'i)
-        if len(valid) >= 6:
-            return valid[::2]  # 0,2,4... = treble
-        return valid[:4]  # max 4 sistem
+
+        # 5'li gruplar = stafflar
+        all_staffs = self._group_staff_lines(groups)
+
+        # Spacing tutarlı olanları al (15-30px)
+        valid = [s for s in all_staffs
+                 if 15 <= int(np.mean(np.diff(s))) <= 30]
+
+        if len(valid) < 2:
+            return valid
+
+        # Grand staff tespiti:
+        # Treble-bass arası gap küçük, sistem arası gap büyük
+        # Her çift staffın ilkini (treble) al
+        treble_staffs = []
+        i = 0
+        while i < len(valid):
+            treble_staffs.append(valid[i])
+            # Sonraki staff bass mi? (gap < spacing*15 ise bass)
+            if i+1 < len(valid):
+                gap = valid[i+1][0] - valid[i][-1]
+                spacing = int(np.mean(np.diff(valid[i])))
+                if gap < spacing * 15:  # Bass staff, atla
+                    i += 2
+                else:
+                    i += 1
+            else:
+                i += 1
+
+        return treble_staffs[:4]
 
     def _detect_notes_in_staff(self, gray_raw, staff_ys, spacing):
         import numpy as np
         pad = spacing * 3
         y1 = max(0, min(staff_ys) - pad)
         y2 = min(gray_raw.shape[0], max(staff_ys) + pad)
-        x_start = int(gray_raw.shape[1] * 0.1)  # %10 sol kenar = clef/imza
+        x_start = int(gray_raw.shape[1] * 0.15)  # %15 sol kenar = clef/imza geç
         crop = gray_raw[y1:y2, x_start:]
 
         _, binary = cv2.threshold(crop, 127, 255, cv2.THRESH_BINARY_INV)
@@ -653,8 +701,8 @@ class PDFOMRService:
                 area = cv2.contourArea(cnt)
                 cx,cy = x+w//2, y+h//2
                 aspect = w/h if h>0 else 0
-                if (area>40 and top<cy<bot and w>8
-                        and h>spacing*min_h_ratio and 0.5<aspect<2.5):
+                if (area>40 and area<spacing*spacing*3 and top<cy<bot and w>8
+                        and h>spacing*min_h_ratio and h<spacing*2.3 and 0.5<aspect<2.5):
                     step = math.floor((first_line_y-cy)/(spacing/2))
                     step = max(-4, min(12, step))
                     nm,oc,midi = self.TREBLE_MAP.get(step, ('C',4,60))
@@ -707,4 +755,26 @@ class PDFOMRService:
             pass
         return '4/4'
 
-
+    def _split_blob(self, mask_roi, min_dist_frac=0.35):
+        """
+        Birbirine yapışmış/birleşmiş nota kafalarını distance-transform
+        ile ayırır. Her kafa merkezde daha 'kalın' olduğu için distance
+        transform tepe noktaları ayrı kafalara denk gelir.
+        Döndürür: [(cx, cy), ...] (mask_roi'nin lokal koordinatlarında)
+        """
+        if mask_roi.size == 0 or mask_roi.max() == 0:
+            return []
+        dist = cv2.distanceTransform(mask_roi, cv2.DIST_L2, 5)
+        m = dist.max()
+        if m <= 0:
+            return []
+        _, peaks = cv2.threshold(dist, m * min_dist_frac, 255, cv2.THRESH_BINARY)
+        peaks = peaks.astype(np.uint8)
+        n_labels, labels = cv2.connectedComponents(peaks)
+        centers = []
+        for lbl in range(1, n_labels):
+            ys, xs = np.where(labels == lbl)
+            if len(xs) < 3:
+                continue
+            centers.append((int(xs.mean()), int(ys.mean())))
+        return centers
