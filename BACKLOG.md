@@ -4,7 +4,26 @@ Bu dosya henüz önceliklendirilmemiş, "bir gün yapılabilir" fikirler ve öze
 
 ## Fikirler
 
-_(henüz boş — yeni bir fikir geldiğinde aşağıdaki şablonla ekle)_
+Aktif iş `TASK.md`'de (oemer değerlendirmesi — Seçenek A; yedek plan Seçenek B: custom OpenCV pipeline'ın `TREBLE_MAP` düzeltmesi sonrası sayısal kabul testi). Aşağıdakiler `TASK.md` "Kapsam Dışı (şimdilik)" ve oturum notlarından çıkan, henüz sıraya girmemiş işler:
+
+### PNG/JPG görüntü pipeline'ının PDF OMR düzeltmelerinden geçirilmesi
+- **Kategori:** iyileştirme
+- **Neden:** Görüntü yolu ayrı ama benzer kod yolu; PDF tarafında bulunan hatalar (anahtar haritası, nota tespiti) orada da olabilir.
+- **Notlar:** oemer kararı netleşince aynı motorla birleştirmek daha ucuz olabilir.
+
+### OMR doğruluk ölçümünü sürekli hale getirmek
+- **Kategori:** teknik borç / test
+- **Neden:** `TREBLE_MAP` düzeltmesi sayısal doğrulanmadan kaldı (SESSION.md).
+- **Notlar:** Referans PNG/PDF seti + beklenen pitch listesi → pytest ile doğruluk oranı; oemer ve OpenCV pipeline'ını aynı setle kıyasla.
+
+### Bağımlılık izolasyonu
+- **Kategori:** teknik borç
+- **Neden:** Önceki oturumda yanlış venv'de `numpy` 2.x'e yükseltme `cv2`'yi kırdı.
+- **Notlar:** oemer için ayrı venv (Seçenek A) kalıcı hale gelirse servis içinden subprocess ile çağırma ve sürüm sabitleme (`numpy<2`, `scipy<1.13`).
+
+### Tab çıktısı iyileştirmeleri
+- **Kategori:** yeni özellik
+- **Notlar:** `GuitarMappingService` için alternatif akort (Drop D, DADGAD), capo, parmak pozisyonu tercihi; MusicXML/MIDI yolu güvenilir olduğundan ilk orada denenebilir.
 
 ## Koddaki TODO / FIXME Notları
 
