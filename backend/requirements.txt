@@ -15,5 +15,4 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 httpx==0.27.0
 # PDF render (fitz) — omr_service.process_pdf ve debug_omr.py kullanır.
-# Sürüm sunucudaki `pip show pymupdf` çıktısıyla sabitlenecek.
-PyMuPDF
+pymupdf==1.28.0
