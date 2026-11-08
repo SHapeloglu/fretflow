@@ -10,12 +10,12 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """
     Uygulama ayarlarını tek yerde toplar. Değerler önce ortam değişkenlerinden (ve .env dosyasından) okunur;
-    ortamda yoksa buradaki varsayılan kullanılır. Varsayılanı olmayan bir alan eksikse uygulama açılırken hata verir.
+    ortamda yoksa uygulama açılırken hata verir (varsayılanı olmayan alanlar zorunludur).
     """
     APP_NAME: str = "FretFlow Smart TAB Engine"
     DATABASE_URL: str  # ortam değişkeninden gelir (backend/.env); koda gömülü bağlantı dizisi yok
-    # DİKKAT: bu varsayılan değer yalnız geliştirme içindir. Kodda şu an kullanılmıyor; canlıda ortamdan gerçek bir değer verilmelidir.
-    SECRET_KEY: str = "change-me-in-production"
+    # Zorunlu: varsayılan yok. Ortamda (backend/.env) değer yoksa uygulama açılmaz; zayıf bir anahtarla çalışmayı önler.
+    SECRET_KEY: str
     # Erişim anahtarının (token) geçerlilik süresi: 60 dakika x 24 saat = 1 gün (dakika cinsinden).
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
 
