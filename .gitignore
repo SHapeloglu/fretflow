@@ -11,3 +11,6 @@ frontend/node_modules/
 *.bak_*
 backend/*.png
 backend/patch_*.py
+
+# Eski yedek kopyalar (düzeltme öncesi)
+*.bak
