@@ -1,4 +1,13 @@
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
+"""
+FretFlow Smart TAB Engine'in API giriş dosyası (FastAPI).
+Uç noktalar: nota yükleme (/api/upload), TAB düzeltme, oy verme ve TAB okuma. Sağlık kontrolü: /health.
+Açılışta eksik tablolar oluşturulur. OMR ve TAB üretimi app.services, veritabanı oturumu app.core.database üzerinden gelir.
+Bu dosyada kimlik doğrulama (giriş) yoktur.
+"""
+
+import time
+from collections import defaultdict
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -7,12 +16,39 @@ from app.models.models import Base, SheetUpload, TabVersion, TabVote
 from app.services.omr_service import OMRService, GuitarMappingService, TrustScoreService
 from app.services.tab_renderer import render_tab
 
+# Eksik tabloları oluşturur, var olanlara dokunmaz. Tablo değişiklikleri (kolon ekleme vb.) bu yolla yapılmaz.
 Base.metadata.create_all(bind=engine, checkfirst=True)
 
-app = FastAPI(title="FretFlow Smart TAB Engine")
+# Swagger/OpenAPI herkese açık olmasın (2026-10-18)
+app = FastAPI(title="FretFlow Smart TAB Engine", docs_url=None, redoc_url=None, openapi_url=None)
+
+# IP ve uç adına göre son istek zamanları. Bellekte tutulur: servis yeniden başlarsa sıfırlanır; birden çok işlem varsa her biri ayrı sayar.
+_rate_store: dict = defaultdict(list)
+
+
+def rate_limit(ad: str, max_istek: int, pencere: int = 60):
+    """IP başına basit hız sınırı (bellekte, süreç başına). nginx X-Real-IP başlığını gönderiyor."""
+    async def kontrol(request: Request):
+        """
+        İç kontrol: her istekte FastAPI tarafından çağrılır (Depends ile bağlanır).
+        İstemci IP'sini X-Real-IP başlığından (yoksa bağlantı adresinden) alır; son 'pencere' saniyedeki istek sayısı max_istek değerine ulaşmışsa HTTP 429 fırlatır.
+        Sınır aşılmamışsa bu isteği kayıt listesine ekler. TODO(kontrol): nginx X-Real-IP değerini istemciden gelenle değiştirmeden mi yazıyor, doğrulanmalı.
+        """
+        ip = request.headers.get("x-real-ip") or (request.client.host if request.client else "?")
+        simdi = time.time()
+        anahtar = f"{ad}:{ip}"
+        kayitlar = [t for t in _rate_store[anahtar] if simdi - t < pencere]
+        if len(kayitlar) >= max_istek:
+            _rate_store[anahtar] = kayitlar
+            raise HTTPException(status_code=429, detail="Çok fazla istek, biraz bekleyin",
+                                headers={"Retry-After": str(pencere)})
+        kayitlar.append(simdi)
+        _rate_store[anahtar] = kayitlar
+    return Depends(kontrol)
 
 app.add_middleware(
     CORSMiddleware,
+    # DİKKAT: her kaynaktan istek kabul ediliyor (*). Canlıda alan adı listesiyle sınırlanmalı.
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
@@ -26,14 +62,22 @@ trust_svc = TrustScoreService()
 
 @app.get("/health")
 async def health():
+    """Servisin çalıştığını kontrol eder (sağlık kontrolü). Veritabanına bakmaz; {"status": "ok"} döner."""
     return {"status": "ok", "app": "FretFlow"}
 
 
 @app.post("/api/upload")
 async def upload_sheet(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    # Hız sınırı: IP başına dakikada en fazla 10 yükleme. Aşılırsa 429 döner.
+    _hiz=rate_limit("upload", 10)
 ):
+    """
+    Nota dosyasını alır, okur ve TAB üretir. Desteklenen türler: MusicXML, MIDI, PNG/JPG, PDF.
+    Aynı nota daha önce yüklendiyse kayıtlı TAB'ları döner (cache_hit=True). İlk yüklemede sistem TAB'ı üretip kaydeder.
+    Tanınmayan ya da okunamayan dosyada örnek (fallback) veri döner.
+    """
     file_bytes = await file.read()
     result = omr_svc.process_file(file_bytes, file.filename)
     music_hash = result["music_hash"]
@@ -113,7 +157,15 @@ async def upload_sheet(
 
 
 @app.put("/api/tab/{tab_id}/edit")
-async def edit_tab(tab_id: int, edit_data: dict, db: Session = Depends(get_db)):
+# Hız sınırı: IP başına dakikada en fazla 20 düzeltme.
+async def edit_tab(tab_id: int, edit_data: dict, db: Session = Depends(get_db), _hiz=rate_limit("edit", 20)):
+    """
+    Kullanıcının düzelttiği TAB'ı yeni bir sürüm olarak kaydeder; eski sürüm silinmez.
+    Gövdede 'tab_data' alanı beklenir. TAB bulunamazsa 404 döner. Dönüş: yeni kaydın id'si ve ASCII TAB.
+    """
+    # tab_data yoksa hiçbir kayıt yapılmadan 422 (geçersiz istek) döner.
+    if "tab_data" not in edit_data:
+        raise HTTPException(status_code=422, detail="tab_data gerekli")
     original = db.query(TabVersion).filter(TabVersion.id == tab_id).first()
     if not original:
         raise HTTPException(status_code=404, detail="TAB bulunamadı")
@@ -136,19 +188,34 @@ async def edit_tab(tab_id: int, edit_data: dict, db: Session = Depends(get_db)):
 
 
 @app.post("/api/tab/{tab_id}/vote")
-async def vote_tab(tab_id: int, vote: dict, db: Session = Depends(get_db)):
+# Hız sınırı: IP başına dakikada en fazla 30 oy.
+async def vote_tab(tab_id: int, vote: dict, db: Session = Depends(get_db), _hiz=rate_limit("vote", 30)):
+    """
+    TAB'a 'rate' ya da 'accuracy' türünde oy verir ve TAB'ın puanlarını yeniden hesaplar.
+    Oy değeri 0-5 arası bir sayı olmalıdır. TAB yoksa 404 döner.
+    """
     tab = db.query(TabVersion).filter(TabVersion.id == tab_id).first()
     if not tab:
         raise HTTPException(status_code=404, detail="TAB bulunamadı")
 
-    user_level = vote.get("user_level", "beginner")
-    weight = trust_svc.get_level_weight(user_level)
+    # Kimlik doğrulama yok: istemcinin bildirdiği user_level/user_id'ye güvenilmez (güven puanı manipülasyonu)
+    weight = trust_svc.get_level_weight("beginner")
+    if vote.get("type") not in ("rate", "accuracy"):
+        raise HTTPException(status_code=422, detail="type rate veya accuracy olmalı")
+    try:
+        deger = float(vote["value"])
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="value sayı olmalı")
+    # Puan 0-5 aralığında olmalı; NaN ve sonsuz değerler de bu kontrole takılıp reddedilir.
+    if not 0 <= deger <= 5:
+        raise HTTPException(status_code=422, detail="value 0-5 aralığında olmalı")
 
     db_vote = TabVote(
         tab_id=tab_id,
-        user_id=vote.get("user_id", 1),
+        # DİKKAT: giriş olmadığı için her oy 1 numaralı kullanıcı adına yazılır; aynı kişi defalarca oy verebilir.
+        user_id=1,
         vote_type=vote["type"],
-        value=vote["value"],
+        value=deger,
         user_level_weight=weight,
     )
     db.add(db_vote)
@@ -158,6 +225,7 @@ async def vote_tab(tab_id: int, vote: dict, db: Session = Depends(get_db)):
     acc_votes = [v for v in all_votes if v.vote_type == "accuracy"]
 
     if rate_votes:
+        # Ağırlıklı ortalama: yüksek seviyeli kullanıcıların oyu daha çok sayılır.
         ws = sum(v.value * v.user_level_weight for v in rate_votes)
         tw = sum(v.user_level_weight for v in rate_votes)
         tab.rate_score = round(ws / tw, 2)
@@ -168,6 +236,7 @@ async def vote_tab(tab_id: int, vote: dict, db: Session = Depends(get_db)):
         tab.accuracy_score = round(ws / tw, 2)
         tab.accuracy_count = len(acc_votes)
 
+    # vote_count yalnız beğeni (rate) oylarını sayar; doğruluk oylarının sayısı accuracy_count'tadır.
     tab.vote_count = len(rate_votes)
     tab.trust_score = trust_svc.compute_trust_score(tab.accuracy_score, tab.rate_score)
     db.commit()
@@ -180,6 +249,7 @@ async def vote_tab(tab_id: int, vote: dict, db: Session = Depends(get_db)):
 
 @app.get("/api/tab/{tab_id}")
 async def get_tab(tab_id: int, db: Session = Depends(get_db)):
+    """Bir TAB sürümünü ASCII TAB, kategori ve puanlarla birlikte döner. TAB yoksa 404 döner."""
     tab = db.query(TabVersion).filter(TabVersion.id == tab_id).first()
     if not tab:
         raise HTTPException(status_code=404, detail="TAB bulunamadı")
