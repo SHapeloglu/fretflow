@@ -32,7 +32,7 @@ Aktif iş `TASK.md`'de (oemer değerlendirmesi — Seçenek A; yedek plan Seçen
 
 ### CORS (tamamlandı — PR #7)
 - Origin listesi `backend/app/main.py` içinde sabit. Konfigürasyondan okunması isteğe bağlı iyileştirme.
-- Dış alan adı `fretflow.dehateknikservis.com` 404 veriyor; CORS listesinde tutuldu, nginx vhost'u doğrulanana kadar kaldırılmadı.
+- Dış alan adı `fretflow.dehateknikservis.com` yayında değil: `sites-available/fretflow` `sites-enabled`'da yok, 443 bloğu olmayan bir Let's Encrypt sertifikasına bağlı (80. port 404). CORS listesinde zararsız olarak duruyor. Karar: vhost'u açıp sertifika üretmek mi, yoksa alan adını ve CORS girdisini kaldırmak mı — sunucu sahibi seçmeli.
 
 ### Yerel PostgreSQL 16 veri kaybının araştırılması
 - **Kategori:** araştırma / altyapı

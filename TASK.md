@@ -16,15 +16,24 @@
 2. **`fretflow.service` enable durumu — ✅ enabled (doğrulandı).** 2026-11-09
    kontrolünde servis `enabled` ve `active`; `Restart=always` olduğu doğrulandı.
    Reboot sonrası açılış yalnızca gözlemle (sunucuda reboot ile) teyit edilebilir.
-3. **Güvenlik:** CORS `*`, `user_id=1` sabiti (kimlik doğrulama yok). Ayrı
-   PR'larda ele alınacak (BACKLOG.md).
+3. **Güvenlik:** CORS artık allowlist (PR #7/#10); oylar `user_id=NULL`. Tekrar
+   oy engeli ve kimlik doğrulama açık (BACKLOG.md).
 4. **oemer testi** (aşağıda) — bekliyor.
 5. **Eski Docker `fretflow` container'ı** — AutoSleep yönetiminde. systemd
    servisiyle çakışma kontrolü başka bir ajanda; bu repoda değişiklik yok.
-6. **Dış erişim notu.** `fretflow.dehateknikservis.com` için `/api/tab/1` ve
-   `/health` 404 dönüyor; `selimkilic.online` 200 dönüyor. Bu, CORS listesine
-   `selimkilic.online` eklenmesinin nedeni. Dış alan adının nginx'te hangi
-   vhost'a bağlı olduğu henüz doğrulanmadı.
+6. **Dış erişim (doğrulandı, 2026-11-09).** Canlı FretFlow alan adı
+   `selimkilic.online` (nginx `sites-enabled`, `/api` ve `/health` → 127.0.0.1:8010, 200).
+   `fretflow.dehateknikservis.com` yayında değil: `sites-available/fretflow`
+   `sites-enabled`'da yok; 80. port bloğu bilerek 404 dönüyor, 443 bloğu olmayan
+   bir Let's Encrypt sertifikasına bağlı. Kod hatası değil; vhost/sertifika
+   kararı sunucu sahibinde (BACKLOG.md).
+7. **Sunucu değişiklikleri (2026-11-09, sahibi onayıyla).**
+   - `/etc/systemd/system/fretflow.service`: `Requires=postgresql.service`
+     kaldırıldı, `After=/Wants=docker.service` eklendi. Yedek:
+     `fretflow.service.bak_20261109212332`. `daemon-reload` yapıldı.
+   - `app/main.py`: CORS'a `https://selimkilic.online` eklendi (repo PR #10 ile
+     birebir). Yedek: `main.py.bak_20261109212938`. Servis restart edildi;
+     `/health` 200, selimkilic.online için ACAO dönüyor, yabancı origin dönmüyor.
 
 ## ✅ TAMAMLANDI (2026-11-09) — Repo Temizliği ve Sunucu Eşitleme
 
