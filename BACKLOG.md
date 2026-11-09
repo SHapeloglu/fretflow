@@ -25,15 +25,13 @@ Aktif iş `TASK.md`'de (oemer değerlendirmesi — Seçenek A; yedek plan Seçen
 - **Kategori:** yeni özellik
 - **Notlar:** `GuitarMappingService` için alternatif akort (Drop D, DADGAD), capo, parmak pozisyonu tercihi; MusicXML/MIDI yolu güvenilir olduğundan ilk orada denenebilir.
 
-### CORS kısıtlama
-- **Kategori:** güvenlik
-- **Neden:** `backend/app/main.py` içinde `allow_origins=["*"]`; her origin API'ye erişebiliyor.
-- **Notlar:** Ayrı PR. İzinli origin listesi konfigürasyondan okunmalı.
-
-### `user_id=1` sabiti / kimlik doğrulama
+### Oy kimliği ve tekrar oy engeli (kimlik doğrulama yok)
 - **Kategori:** güvenlik / yeni özellik
-- **Neden:** Kullanıcı kimliği sabit `1`; giriş ve kimlik doğrulama yok.
-- **Notlar:** Ayrı PR. Önce tasarım kararı gerekli (oturum/token yaklaşımı).
+- **Neden:** Anonim oylar `user_id=NULL` ile yazılıyor (PR #7). Aynı kişi aynı TAB'a defalarca oy verebilir.
+- **Notlar:** `tab_votes`'a bir oy kimliği kolonu (ör. IP+UA özeti) eklemek şema değişikliği gerektirir (`create_all` kolon eklemez; ALTER gerekir). Giriş sistemi için önce tasarım kararı (oturum/token).
+
+### CORS (tamamlandı — PR #7)
+- Origin listesi `backend/app/main.py` içinde sabit. Konfigürasyondan okunması isteğe bağlı iyileştirme.
 
 ### Yerel PostgreSQL 16 veri kaybının araştırılması
 - **Kategori:** araştırma / altyapı
