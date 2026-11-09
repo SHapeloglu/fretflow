@@ -5,9 +5,10 @@ Nota (sheet music) verisinden otomatik **gitar tab'ı** üreten bir OMR
 MusicXML, MIDI veya görüntü) yükler; sistem notaları tespit edip gitar
 üzerinde çalınabilir pozisyonlara (string / fret / finger) çevirir.
 
-> **Durum:** Aktif geliştirme, production'da çalışıyor. PDF→OMR yolunda
-> bilinen bir pitch-doğruluğu sorunu var (aşağıda detaylı, bkz. [Bilinen
-> Sorunlar](#bilinen-sorunlar-ve-güncel-durum)).
+> **Durum (2026-11-09):** Aktif geliştirme. Sunucuda `fretflow` servisi
+> **2026-11-08 13:51'den beri 8010'da dinlemiyor** (DB bağlantısı şüphesi,
+> araştırılıyor — doğrulanmadı). PDF→OMR yolunda bilinen bir pitch-doğruluğu
+> sorunu var (bkz. [Bilinen Sorunlar](#bilinen-sorunlar-ve-güncel-durum)).
 
 ---
 
@@ -103,7 +104,7 @@ planlanıyor.
 - **Python 3.12**, FastAPI (production'da `uvicorn`, 2 worker ile çalışıyor)
 - **OpenCV** (`opencv-python-headless==4.9.0.80`) — görüntü işleme, staff/nota tespiti
 - **NumPy** (`1.26.4`)
-- **PyMuPDF** (`fitz`) — PDF → görüntü render
+- **PyMuPDF** (`fitz`, `1.28.0`) — PDF → görüntü render
 - **music21** (`9.1.0`) — MusicXML/MIDI parse (en güvenilir yol)
 - **pytesseract** — tempo / time-signature OCR
 - **SQLAlchemy** + **Alembic** + **psycopg2** — veritabanı katmanı
@@ -122,6 +123,11 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
+
+Üretim kodu `backend/` altındadır. Ortam değişkenleri `backend/.env`
+dosyasından okunur; `DATABASE_URL` ve `SECRET_KEY` **zorunludur** (varsayılanı
+yoktur, eksikse uygulama açılmaz). Örnek için `backend/.env.example`'a bakın;
+gerçek değerleri repoya koymayın.
 
 Servis systemd altında çalışacak şekilde kurulu (`fretflow.service`):
 
@@ -169,6 +175,15 @@ print(result['omr_data']['notes'])
   notalarının bir basamak yanlış (yüksek) tespit edilmesine yol açıyordu.
   Hem modül seviyesindeki hem `PDFOMRService` sınıfı içindeki
   `TREBLE_MAP` düzeltildi.
+
+### 🔴 Açık (araştırılıyor, çözülmedi — 2026-11-09)
+
+- **Servis DB bağlantısı:** sunucuda `fretflow` 2026-11-08 13:51'den beri
+  8010'da dinlemiyor; DB bağlantısı şüphesi var. Yerel PostgreSQL 16 `main`
+  kümesinin veri dizini yok, Docker `postgres-ortak` (5434) içindeki
+  `fretflow_db` eski kopya gibi görünüyor. Canlı verinin yeri doğrulanmadı.
+- **`fretflow.service` `disabled`** — reboot'ta kalkmaz.
+- **Güvenlik:** CORS `*`, `user_id=1` sabiti (kimlik doğrulama yok).
 
 ### 🔄 Devam Ediyor
 

@@ -18,7 +18,7 @@ sistem notaları tespit edip gitar üzerinde çalınabilir pozisyonlara
 | Sunucu | `95.111.242.96` (SSH: `root@95.111.242.96`) |
 | **Production venv** | `/opt/fretflow/venv` — `~/.bashrc`'de otomatik aktif oluyor (`source /opt/fretflow/venv/bin/activate`) |
 | **oemer venv (izole, deneysel)** | `/opt/oemer_venv` — manuel aktive edilmeli: `source /opt/oemer_venv/bin/activate` |
-| Proje dizini | `/opt/fretflow/backend` |
+| Proje dizini | `/opt/fretflow/backend` (repoda da `backend/` altında; kök `app/` ve `smart-tab/` kaldırıldı) |
 | Ana kod dosyası | `/opt/fretflow/backend/app/services/omr_service.py` |
 | Debug scripti | `/opt/fretflow/backend/debug_omr.py` |
 | Requirements | `/opt/fretflow/backend/requirements.txt` (production'ın tek doğruluk kaynağı) |
@@ -86,7 +86,7 @@ hataya bir kez düşüldü (bkz. SESSION.md §16).
 - Python 3.12, FastAPI + uvicorn (2 worker, systemd altında)
 - OpenCV (`opencv-python-headless==4.9.0.80`, production'da) — görüntü işleme, staff/nota tespiti
 - NumPy (`1.26.4`)
-- PyMuPDF (`fitz`) — PDF → görüntü render
+- PyMuPDF (`fitz`, `1.28.0` sabitli) — PDF → görüntü render
 - `music21==9.1.0` — MusicXML/MIDI parse (en güvenilir yol, dokunulmuyor)
 - `pytesseract` — tempo/time-signature OCR
 - SQLAlchemy + Alembic + psycopg2 — veritabanı katmanı

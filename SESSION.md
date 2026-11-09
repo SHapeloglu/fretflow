@@ -14,6 +14,14 @@
 | **Sayısal doğrulama (kabul testi)** | ❌ Henüz yapılmadı — bir sonraki oturumda ilk iş |
 | **Yaklaşım kararı** | 🔄 Custom OpenCV pipeline'dan **oemer**'e geçiş kararlaştırıldı, bağımsız araştırmayla desteklendi |
 | **oemer kurulumu/testi** | 🔄 İzole venv (`/opt/oemer_venv`) hazır ama test PNG üzerinde henüz ÇALIŞTIRILMADI (kaldığımız yer) |
+| **Repo temizliği (2026-11-09)** | ✅ `app/` (kök) ve `smart-tab/` kaldırıldı (PR #1); `omr_service.py.bak` kaldırıldı, `.gitignore`'a `*.bak` eklendi. Üretim kodu `backend/` altında |
+| **requirements.txt** | ✅ `pymupdf==1.28.0` sabitlendi (PR #2) |
+| **main.py / config.py eşitleme** | ✅ Sunucudaki dosyalarla birebir eşitlendi (PR #3). Repoda artık sunucudaki güvenlik/hız sınırı kodu da var (bkz. §18) |
+| **SECRET_KEY** | ✅ Varsayılan kaldırıldı, zorunlu (PR #4). Sunucu `.env` içinde 64 karakterlik değer var (değer repoda yok) |
+| **omr_service.py (repo ↔ sunucu)** | ✅ AST düzeyinde aynı; sunucuda yalnızca fazladan docstring/yorum var. `TREBLE_MAP` düzeltmesi iki tarafta da var |
+| **🔴 Servis DB bağlantısı (AÇIK)** | 🔍 Araştırılıyor — uvicorn 127.0.0.1:8010 2026-11-08 13:51'den beri dinlemiyor. Sebep DB bağlantısı (bkz. §18). Canlı verinin yeri doğrulanmadı |
+| **🔴 fretflow.service (AÇIK)** | ⚠️ Sunucuda `disabled` — reboot sonrası kalkmaz |
+| **🔴 Güvenlik (AÇIK)** | ⚠️ CORS `*`, `user_id=1` sabiti (giriş yok), kimlik doğrulama yok — araştırılıyor, çözülmedi |
 
 ---
 
@@ -172,6 +180,51 @@ belirgin şekilde staff'ın altında (ledger-line bölgesi) — düzeltilen
 negatif step aralığıyla örtüşüyor. Ama bu görsel `putText` eklemesinden
 **önce** alınmıştı, üzerinde pitch ismi yazmıyordu — kesin gözle teyit
 için etiketli yeni overlay gerekiyor (bkz. §14 sonu, açık kalan iş).
+
+## 18. 2026-11-09 — Repo Temizliği, Sunucu Eşitleme ve Açık Sorunlar
+
+Bu oturumda yalnızca dokümanlar güncellendi; kod değiştirilmedi. Sunucuya
+bağlanılmadı; sunucu ile ilgili maddeler kullanıcının bildirdiği
+gözlemlerdir ve repodan doğrulanamaz.
+
+### Repo (git'te doğrulandı)
+
+1. **PR #1** — `app/` (kök) ve `smart-tab/` kaldırıldı. Üretim kodu `backend/` ağacıdır.
+   `backend/app/services/omr_service.py.bak` kaldırıldı; `.gitignore`'a `*.bak` eklendi.
+2. **PR #2** — `backend/requirements.txt` içinde `pymupdf==1.28.0` sabitlendi.
+3. **PR #3** — `backend/app/main.py` ve `backend/app/core/config.py` sunucudaki
+   dosyalarla birebir eşitlendi. Repoda artık şunlar var (sunucudan gelen kod):
+   - IP başına hız sınırı: upload 10/dk, edit 20/dk, vote 30/dk
+   - Swagger/OpenAPI kapalı (`docs_url=None`, `openapi_url=None`)
+   - Oy (`vote`) türü doğrulaması (`rate` / `accuracy`)
+   - `user_id=1` sabiti (giriş/kimlik doğrulama yok)
+   - CORS `allow_origins=["*"]`
+4. **PR #4** — `SECRET_KEY` varsayılanı kaldırıldı, zorunlu yapıldı
+   (`config.py`). `DATABASE_URL` da zaten zorunlu ve koddan gömülü değil.
+5. `omr_service.py` repo ve sunucuda AST düzeyinde aynı. Modül seviyesi ve
+   `PDFOMRService` içi `TREBLE_MAP` düzeltmesi (`-1:('D',4,62)`) iki tarafta da var.
+
+### Sunucu (kullanıcı gözlemi — repodan doğrulanamaz)
+
+- Sunucuda `config.py` yedeği: `/opt/fretflow/backend/app/core/config.py.bak_20261108155131`
+- `.env` içinde 64 karakterlik SECRET_KEY doğrulandı (değer bu dosyada yok, olmamalı).
+
+### 🔴 AÇIK — Servis DB bağlantısı (araştırılıyor, çözülmedi)
+
+- `fretflow` (uvicorn 127.0.0.1:8010) **2026-11-08 13:51'den beri 8010'da dinlemiyor.**
+  Sebep olarak veritabanı bağlantısı düşünülüyor.
+- Yerel PostgreSQL 16 `main` (5432) kümesinin veri dizini **yok**.
+- `.env` `apache` kullanıcısı ve `localhost:5432` kullanıyor.
+- Docker `postgres-ortak` (5434) içindeki `fretflow_db` eski bir kopya gibi görünüyor:
+  son kayıt Temmuz 2026, `uygulama` rolü sahibi, `apache` rolü yok.
+- **Canlı verinin hangi veritabanında olduğu DOĞRULANMADI.** Bu netleşmeden
+  DB'ye yazan bir işlem yapılmamalı.
+
+### 🔴 AÇIK — Diğer
+
+- `fretflow.service` sunucuda `disabled` (reboot'ta kalkmaz). — araştırılıyor
+- Güvenlik: CORS `*`, `user_id=1` sabiti, kimlik doğrulama yok. — araştırılıyor, çözülmedi
+- oemer testi (TASK.md) hâlâ bekliyor; kabul testi (`Dogruluk: x/10`) ölçülmedi.
 
 ---
 
