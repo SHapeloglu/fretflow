@@ -44,6 +44,14 @@ Doğrulama:
 
 (Detay: SESSION.md §11-13 sorunun oluşumu, §14 çözümü.)
 
+## ✅ TAMAMLANDI — oemer Kabul Testi (2026-11-09)
+
+- Test: `/tmp/nota_page1.png` (PDF'den 3x render) üzerinde `oemer` (`/opt/oemer_venv`, oemer 0.1.8) çalıştırıldı; ~12 dk sürdü, MusicXML üretildi.
+- Beklenen ilk 10 pitch: `G4 G4 A4 G4 E4 F4 E4 D4 E4 D4`.
+- **oemer:** 121 nota üretti, ilk 10: `C4 D4 E4 D4 C4 D4 E4 D4 C4 G4` → **2/10** (aşırı tespit var).
+- **Mevcut OpenCV pipeline (`PDFOMRService`, üretim):** 55 nota, ilk 10: `D4 E4 C4 C4 C4 D4 C4 B3 G4 D5` → **0/10**.
+- Sonuç: İki yaklaşım da kabul eşiğini geçmiyor. oemer'i üretime almak için karar verilmedi; üretim pipeline'ı değişmedi. Bir sonraki adım: `TREBLE_MAP`/staff tespiti için ayrı bir doğruluk iyileştirmesi (BACKLOG'a bakın).
+
 ## ✅ TAMAMLANDI — `TREBLE_MAP` Off-by-One Fix
 
 ARCHITECT.md'de detaylandırılan, staff altı (ledger-line) notaların yanlış
