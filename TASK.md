@@ -1,24 +1,26 @@
 # TASK.md — Şu Anki Görev
 
-## 🔴 AÇIK SORUNLAR (2026-11-09) — araştırılıyor, çözülmedi
+## 🟡 AÇIK / TEYİT BEKLİYOR (2026-11-09)
 
-> Aşağıdakiler çözülmüş değildir. Sunucu tarafı bilgileri kullanıcı gözlemidir,
-> repodan doğrulanamaz.
+> Sunucu tarafı bilgileri kullanıcı doğrulamasıdır, repodan doğrulanamaz.
+> Ayrıntı: SESSION.md §19.
 
-1. **Servis DB bağlantısı — ÖNCELİKLİ.** `fretflow` (uvicorn 127.0.0.1:8010)
-   2026-11-08 13:51'den beri dinlemiyor; sebep DB bağlantısı olarak düşünülüyor.
-   - Yerel PostgreSQL 16 `main` (5432) kümesinin veri dizini yok.
-   - `.env` `apache` kullanıcısı ve `localhost:5432` kullanıyor.
-   - Docker `postgres-ortak` (5434) içindeki `fretflow_db` eski kopya gibi
-     görünüyor (son kayıt Temmuz 2026, `uygulama` rolü, `apache` rolü yok).
-   - **Yapılacak (araştırma):** canlı verinin hangi kümede olduğunu doğrula;
-     `.env`'deki DATABASE_URL'in hangi kümeye gittiğini ve `apache` rolünün
-     var olup olmadığını teyit et. Doğrulanmadan DB'ye yazma yapılmasın.
-2. **`fretflow.service` `disabled`** — reboot'ta servis kalkmaz. Karar
-   verilmedi (enable edilmeli mi, DB sorunu çözülmeden mi?).
-3. **Güvenlik:** CORS `*`, `user_id=1` sabiti (kimlik doğrulama yok). Karar
-   ve tasarım bekliyor.
+1. **Servis DB bağlantısı — ✅ çözüldü, veri eşleşmesi teyit bekliyor.**
+   - Uygulama Docker `postgres-ortak` (127.0.0.1:5434) içindeki `fretflow_db`
+     veritabanına `uygulama` rolüyle bağlanıyor. `backend/.env` DATABASE_URL'i
+     buna göre değiştirildi (eski dosya yedeği: `/opt/fretflow/backend/.env.bak_20261109095730`).
+   - Yerel PostgreSQL 16 `main` (5432) kullanılmıyor; veri dizini kayıp.
+   - **Teyit bekleyen:** `fretflow_db` içeriği 18 Ekim geçiş dump'ıyla aynı
+     (users 0, sheet_uploads 4, tab_versions 4, tab_votes 0; son kayıt
+     2026-07-14). Kayıp kullanıcı/oy verisi olmadığı sahibi tarafından teyit edilmeli.
+2. **`fretflow.service` enable durumu — teyit bekliyor.** Servis şu an
+   127.0.0.1:8010'da çalışıyor (`/health` 200). Son bilinen durum `disabled`
+   idi; reboot sonrası kalkıp kalkmayacağı teyit edilmeli.
+3. **Güvenlik:** CORS `*`, `user_id=1` sabiti (kimlik doğrulama yok). Ayrı
+   PR'larda ele alınacak (BACKLOG.md).
 4. **oemer testi** (aşağıda) — bekliyor.
+5. **Eski Docker `fretflow` container'ı** — AutoSleep yönetiminde. systemd
+   servisiyle çakışma kontrolü başka bir ajanda; bu repoda değişiklik yok.
 
 ## ✅ TAMAMLANDI (2026-11-09) — Repo Temizliği ve Sunucu Eşitleme
 

@@ -19,9 +19,9 @@
 | **main.py / config.py eşitleme** | ✅ Sunucudaki dosyalarla birebir eşitlendi (PR #3). Repoda artık sunucudaki güvenlik/hız sınırı kodu da var (bkz. §18) |
 | **SECRET_KEY** | ✅ Varsayılan kaldırıldı, zorunlu (PR #4). Sunucu `.env` içinde 64 karakterlik değer var (değer repoda yok) |
 | **omr_service.py (repo ↔ sunucu)** | ✅ AST düzeyinde aynı; sunucuda yalnızca fazladan docstring/yorum var. `TREBLE_MAP` düzeltmesi iki tarafta da var |
-| **🔴 Servis DB bağlantısı (AÇIK)** | 🔍 Araştırılıyor — uvicorn 127.0.0.1:8010 2026-11-08 13:51'den beri dinlemiyor. Sebep DB bağlantısı (bkz. §18). Canlı verinin yeri doğrulanmadı |
-| **🔴 fretflow.service (AÇIK)** | ⚠️ Sunucuda `disabled` — reboot sonrası kalkmaz |
-| **🔴 Güvenlik (AÇIK)** | ⚠️ CORS `*`, `user_id=1` sabiti (giriş yok), kimlik doğrulama yok — araştırılıyor, çözülmedi |
+| **Servis DB bağlantısı** | ✅ Çözüldü — uygulama Docker `postgres-ortak` (127.0.0.1:5434) / `fretflow_db` / `uygulama` rolüne bağlı; `/health` 200. Veri eşleşmesi sahibi teyidi bekliyor (bkz. §19) |
+| **fretflow.service enable durumu (TEYİT BEKLİYOR)** | ⏳ Servis çalışıyor; son bilinen durum `disabled` (§18). Reboot sonrası kalkıp kalkmayacağı teyit edilmedi (bkz. §19) |
+| **🔴 Güvenlik (AÇIK)** | ⚠️ CORS `*`, `user_id=1` sabiti (giriş yok), kimlik doğrulama yok — ayrı PR'larda ele alınacak (BACKLOG.md) |
 
 ---
 
@@ -209,7 +209,7 @@ gözlemlerdir ve repodan doğrulanamaz.
 - Sunucuda `config.py` yedeği: `/opt/fretflow/backend/app/core/config.py.bak_20261108155131`
 - `.env` içinde 64 karakterlik SECRET_KEY doğrulandı (değer bu dosyada yok, olmamalı).
 
-### 🔴 AÇIK — Servis DB bağlantısı (araştırılıyor, çözülmedi)
+### ✅ Çözüldü (güncel durum §19) — Servis DB bağlantısı (eski tanı)
 
 - `fretflow` (uvicorn 127.0.0.1:8010) **2026-11-08 13:51'den beri 8010'da dinlemiyor.**
   Sebep olarak veritabanı bağlantısı düşünülüyor.
@@ -220,11 +220,52 @@ gözlemlerdir ve repodan doğrulanamaz.
 - **Canlı verinin hangi veritabanında olduğu DOĞRULANMADI.** Bu netleşmeden
   DB'ye yazan bir işlem yapılmamalı.
 
-### 🔴 AÇIK — Diğer
+### 🔴 AÇIK — Diğer (2026-11-09 güncel durum: §19)
 
 - `fretflow.service` sunucuda `disabled` (reboot'ta kalkmaz). — araştırılıyor
 - Güvenlik: CORS `*`, `user_id=1` sabiti, kimlik doğrulama yok. — araştırılıyor, çözülmedi
 - oemer testi (TASK.md) hâlâ bekliyor; kabul testi (`Dogruluk: x/10`) ölçülmedi.
+
+---
+
+## 19. 2026-11-09 — DB Bağlantısı Çözüldü (veri teyidi bekliyor)
+
+Bu bölüm §18'deki DB açığının güncel durumudur. Claude sunucuya bağlanmadı;
+aşağıdaki sunucu bilgileri kullanıcının doğrulamasıdır (repodan doğrulanamaz).
+Bu oturumda kod değiştirilmedi.
+
+### Doğrulanmış durum (sunucu, kullanıcı doğrulaması)
+
+- `fretflow` systemd servisi 127.0.0.1:8010'da çalışıyor; `/health` 200 dönüyor.
+- Yerel PostgreSQL 16 `main` (5432) kullanılmıyor; veri dizini kayıp.
+- Uygulama Docker `postgres-ortak` konteynerindeki (127.0.0.1:5434)
+  `fretflow_db` veritabanına `uygulama` rolüyle bağlanıyor.
+- Bağlantı, `/opt/fretflow/.env` içindeki Docker dönemi ayarıyla aynıdır;
+  `backend/.env` içindeki `DATABASE_URL` buna göre değiştirildi. Eski
+  dosyanın yedeği: `/opt/fretflow/backend/.env.bak_20261109095730`
+  (gizli değer içerir; repoya alınmamalı).
+
+### Veri doğrulaması
+
+- 18 Ekim geçiş dump'ı (`/root/yedekler/fretflow-gecis-20261018-2121/fretflow_db.dump`)
+  geçici bir container'a geri yüklendi. İçeriği Docker `fretflow_db` ile aynı:
+  `users` 0, `sheet_uploads` 4, `tab_versions` 4, `tab_votes` 0; son kayıt 2026-07-14.
+- Bilinen en iyi kaynak bu dump. Kullanıcı/oy verisi kaybolmuş olmayabilir ama
+  kesin değil; sahibinin teyidi gerekiyor.
+
+### Yerel PostgreSQL veri kaybı
+
+- Veri dizininin kaybolma zamanı: 19 Ekim – 8 Kasım arası. **Kanıtlanamadı.**
+  Araştırma BACKLOG.md'ye eklendi.
+
+### Açık kalanlar
+
+- `fretflow.service` enable durumu teyit bekliyor (son bilinen `disabled`, §18).
+- Docker `fretflow` container'ı (eski kurulum, AutoSleep yönetiminde): systemd
+  servisiyle çakışma kontrolü başka bir ajanda yapılıyor. Bu konuda değişiklik
+  yapılmadı; yalnızca kayıt altına alındı.
+- CORS `*` ve `user_id=1` sabiti: ayrı PR'larda ele alınacak (BACKLOG.md).
+- oemer testi (TASK.md) hâlâ bekliyor.
 
 ---
 

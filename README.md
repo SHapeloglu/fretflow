@@ -6,9 +6,10 @@ MusicXML, MIDI veya görüntü) yükler; sistem notaları tespit edip gitar
 üzerinde çalınabilir pozisyonlara (string / fret / finger) çevirir.
 
 > **Durum (2026-11-09):** Aktif geliştirme. Sunucuda `fretflow` servisi
-> **2026-11-08 13:51'den beri 8010'da dinlemiyor** (DB bağlantısı şüphesi,
-> araştırılıyor — doğrulanmadı). PDF→OMR yolunda bilinen bir pitch-doğruluğu
-> sorunu var (bkz. [Bilinen Sorunlar](#bilinen-sorunlar-ve-güncel-durum)).
+> (systemd, 127.0.0.1:8010) çalışıyor, `/health` 200. Veritabanı: Docker
+> `postgres-ortak` (127.0.0.1:5434), `fretflow_db`, `uygulama` rolü; veri
+> eşleşmesi teyit bekliyor (SESSION.md §19). PDF→OMR yolunda bilinen bir
+> pitch-doğruluğu sorunu var (bkz. [Bilinen Sorunlar](#bilinen-sorunlar-ve-güncel-durum)).
 
 ---
 
@@ -129,6 +130,10 @@ dosyasından okunur; `DATABASE_URL` ve `SECRET_KEY` **zorunludur** (varsayılan�
 yoktur, eksikse uygulama açılmaz). Örnek için `backend/.env.example`'a bakın;
 gerçek değerleri repoya koymayın.
 
+Sunucuda `DATABASE_URL`, Docker `postgres-ortak` (127.0.0.1:5434) içindeki
+`fretflow_db` veritabanına `uygulama` rolüyle bağlanır. Dokümanda yalnızca
+host/port/rol yazılıdır; şifre ve tam URL yoktur.
+
 Servis systemd altında çalışacak şekilde kurulu (`fretflow.service`):
 
 ```bash
@@ -175,15 +180,14 @@ print(result['omr_data']['notes'])
   notalarının bir basamak yanlış (yüksek) tespit edilmesine yol açıyordu.
   Hem modül seviyesindeki hem `PDFOMRService` sınıfı içindeki
   `TREBLE_MAP` düzeltildi.
+- **Servis DB bağlantısı** — uygulama Docker `postgres-ortak` (127.0.0.1:5434)
+  / `fretflow_db` / `uygulama` rolüne bağlı; yerel PostgreSQL 16 `main` (5432)
+  kullanılmıyor (veri dizini kayıp). Veri eşleşmesi teyit bekliyor (SESSION.md §19).
 
-### 🔴 Açık (araştırılıyor, çözülmedi — 2026-11-09)
+### 🟡 Teyit bekleyen / açık
 
-- **Servis DB bağlantısı:** sunucuda `fretflow` 2026-11-08 13:51'den beri
-  8010'da dinlemiyor; DB bağlantısı şüphesi var. Yerel PostgreSQL 16 `main`
-  kümesinin veri dizini yok, Docker `postgres-ortak` (5434) içindeki
-  `fretflow_db` eski kopya gibi görünüyor. Canlı verinin yeri doğrulanmadı.
-- **`fretflow.service` `disabled`** — reboot'ta kalkmaz.
-- **Güvenlik:** CORS `*`, `user_id=1` sabiti (kimlik doğrulama yok).
+- **`fretflow.service` enable durumu** — reboot sonrası kalkıp kalkmayacağı teyit edilmedi.
+- **Güvenlik:** CORS `*`, `user_id=1` sabiti (kimlik doğrulama yok) — ayrı PR'larda ele alınacak.
 
 ### 🔄 Devam Ediyor
 
