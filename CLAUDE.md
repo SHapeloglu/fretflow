@@ -23,6 +23,12 @@ sistem notaları tespit edip gitar üzerinde çalınabilir pozisyonlara
 | Debug scripti | `/opt/fretflow/backend/debug_omr.py` |
 | Requirements | `/opt/fretflow/backend/requirements.txt` (production'ın tek doğruluk kaynağı) |
 | Servis yönetimi | `systemctl status/restart fretflow` (systemd, `fretflow.service`, port 8010, 2 uvicorn worker) |
+| Veritabanı (production) | Docker `postgres-ortak` — `127.0.0.1:5434`, veritabanı `fretflow_db`, rol `uygulama`. Bağlantı `/opt/fretflow/backend/.env` içindeki `DATABASE_URL` ile tanımlı (gerçek değer bu dosyada/dokümanda yok) |
+| Docker dönemi bağlantısı | `/opt/fretflow/.env` — Docker dönemine ait; güncel bağlantı için `backend/.env`'e bakın |
+| Kullanılmayan yerel DB | Yerel PostgreSQL 16 `main` (5432) — veri dizini yok, kullanılmıyor |
+| Eski Docker container | `fretflow` (AutoSleep yönetiminde) — systemd servisiyle çakışma kontrolü başka bir ajanda; bu repoda değişiklik yapılmadı |
+| SECRET_KEY | Zorunlu (varsayılan yok). Değeri yalnızca sunucudaki `.env` içinde; repoda ve dokümanda yok |
+| Sunucu yedekleri | Geçiş dump'ı: `/root/yedekler/fretflow-gecis-20261018-2121/fretflow_db.dump`; `.env` yedeği: `/opt/fretflow/backend/.env.bak_20261109095730` (gizli değer içerir) |
 | Test PDF | `/tmp/nota.pdf` (kaynağı: `cp "/var/tmp/Yeni Proje.pdf" /tmp/nota.pdf`) |
 | Test PNG (oemer için render edilmiş) | `/tmp/nota_page1.png` (3x zoom, PyMuPDF ile üretildi) |
 | Debug çıktı dizini | `/tmp/omr_debug/` (crop/binary/no_staff/no_stems/overlay PNG'leri, staff başına) |

@@ -13,6 +13,9 @@
   sabiti ve CORS `*` ayarları OMR mimarisinin parçası değildir, ama repoda
   bulunur.
 - `SECRET_KEY` zorunludur (PR #4). `pymupdf==1.28.0` sabitli (PR #2).
+- **Veritabanı bağlantısı (2026-11-09):** Uygulama `DATABASE_URL` ile Docker
+  `postgres-ortak` (127.0.0.1:5434) içindeki `fretflow_db` veritabanına,
+  `uygulama` rolüyle bağlanır. Yerel PostgreSQL 5432 kullanılmıyor. Ayrıntı: SESSION.md §19.
 - Servis katmanında `OMRService`, `GuitarMappingService`, `TrustScoreService`
   ve `PDFOMRService` sınıfları vardır (dosya 780 satır).
 
