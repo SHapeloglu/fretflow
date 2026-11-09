@@ -32,6 +32,7 @@ Aktif iş `TASK.md`'de (oemer değerlendirmesi — Seçenek A; yedek plan Seçen
 
 ### CORS (tamamlandı — PR #7)
 - Origin listesi `backend/app/main.py` içinde sabit. Konfigürasyondan okunması isteğe bağlı iyileştirme.
+- Dış alan adı `fretflow.dehateknikservis.com` 404 veriyor; CORS listesinde tutuldu, nginx vhost'u doğrulanana kadar kaldırılmadı.
 
 ### Yerel PostgreSQL 16 veri kaybının araştırılması
 - **Kategori:** araştırma / altyapı
