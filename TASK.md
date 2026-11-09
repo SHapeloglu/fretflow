@@ -1,5 +1,33 @@
 # TASK.md — Şu Anki Görev
 
+## 🔴 AÇIK SORUNLAR (2026-11-09) — araştırılıyor, çözülmedi
+
+> Aşağıdakiler çözülmüş değildir. Sunucu tarafı bilgileri kullanıcı gözlemidir,
+> repodan doğrulanamaz.
+
+1. **Servis DB bağlantısı — ÖNCELİKLİ.** `fretflow` (uvicorn 127.0.0.1:8010)
+   2026-11-08 13:51'den beri dinlemiyor; sebep DB bağlantısı olarak düşünülüyor.
+   - Yerel PostgreSQL 16 `main` (5432) kümesinin veri dizini yok.
+   - `.env` `apache` kullanıcısı ve `localhost:5432` kullanıyor.
+   - Docker `postgres-ortak` (5434) içindeki `fretflow_db` eski kopya gibi
+     görünüyor (son kayıt Temmuz 2026, `uygulama` rolü, `apache` rolü yok).
+   - **Yapılacak (araştırma):** canlı verinin hangi kümede olduğunu doğrula;
+     `.env`'deki DATABASE_URL'in hangi kümeye gittiğini ve `apache` rolünün
+     var olup olmadığını teyit et. Doğrulanmadan DB'ye yazma yapılmasın.
+2. **`fretflow.service` `disabled`** — reboot'ta servis kalkmaz. Karar
+   verilmedi (enable edilmeli mi, DB sorunu çözülmeden mi?).
+3. **Güvenlik:** CORS `*`, `user_id=1` sabiti (kimlik doğrulama yok). Karar
+   ve tasarım bekliyor.
+4. **oemer testi** (aşağıda) — bekliyor.
+
+## ✅ TAMAMLANDI (2026-11-09) — Repo Temizliği ve Sunucu Eşitleme
+
+- PR #1: `app/` (kök) ve `smart-tab/` kaldırıldı; `omr_service.py.bak` kaldırıldı, `.gitignore`'a `*.bak`.
+- PR #2: `pymupdf==1.28.0` sabitlendi (`backend/requirements.txt`).
+- PR #3: `backend/app/main.py` ve `backend/app/core/config.py` sunucuyla eşitlendi.
+- PR #4: `SECRET_KEY` zorunlu yapıldı (varsayılan kaldırıldı).
+- Ayrıntı: SESSION.md §18.
+
 ## ✅ TAMAMLANDI — Production Venv Restore
 
 ~~Production venv'in (`/opt/fretflow/venv`) durumu belirsiz/riskliydi~~ —

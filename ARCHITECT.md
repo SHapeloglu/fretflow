@@ -2,6 +2,27 @@
 
 > Bu dosya `omr_service.py`'nin yapısını anlatır. Kod değiştikçe güncellenmeli.
 
+## Repo ve Kod Durumu (2026-11-09)
+
+- Üretim kodu `backend/` altındadır (`backend/app/...`). Kök `app/` ve
+  `smart-tab/` kaldırıldı (PR #1).
+- `backend/app/services/omr_service.py` repo ve sunucuda AST düzeyinde aynı
+  (sunucuda yalnızca fazladan docstring/yorum var).
+- `backend/app/main.py` ve `backend/app/core/config.py` sunucuyla eşitlendi (PR #3).
+  Bu dosyalardaki hız sınırı, Swagger kapatma, oy doğrulaması, `user_id=1`
+  sabiti ve CORS `*` ayarları OMR mimarisinin parçası değildir, ama repoda
+  bulunur.
+- `SECRET_KEY` zorunludur (PR #4). `pymupdf==1.28.0` sabitli (PR #2).
+- Servis katmanında `OMRService`, `GuitarMappingService`, `TrustScoreService`
+  ve `PDFOMRService` sınıfları vardır (dosya 780 satır).
+
+### Parser hata davranışı
+
+- `_parse_pdf()` ve `_parse_image()` istisna olursa ya da sonuç nota
+  içermezse `_fallback()` döner (sabit 4 notalık örnek: E4 F4 G4 E4,
+  `source: 'fallback'`). Bu, hatanın sessizce örnek veriye dönüştüğü anlamına
+  gelir; çağıran taraf `source` alanına bakmalıdır.
+
 ## Genel Pipeline (mevcut, custom OpenCV tabanlı)
 
 ```
@@ -75,7 +96,24 @@ oemer'in gerektirdiği sürümler) birbirine karıştırmadan izole eder.
 Ana giriş noktası. `process_file()` dosya uzantısına göre doğru parser'a yönlendirir.
 Tüm parser'lar hata durumunda `_fallback()`'e düşer (sabit 4 notalık örnek veri).
 
+**Görüntü (PNG/JPG/JPEG/WEBP) yolu** `_parse_image()` → kendi yardımcı
+metodlarını kullanır (PDF yolundaki `PDFOMRService` değil):
+`_detect_staff_lines` → `_binarize` → `_remove_staff_and_stems` →
+`_detect_note_heads` → `_detect_tempo` / `_detect_time_signature` →
+`_build_music_data` (pitch dönüşümü `_build_music_data` içinde
+`_y_to_pitch` ile yapılır).
+
+**Önemli:** Görüntü yolu `_y_to_pitch` içinde **modül seviyesindeki**
+`TREBLE_MAP`'i kullanır (`PDFOMRService.TREBLE_MAP` değil). Yani
+`TREBLE_MAP` düzeltmesi (SESSION.md §14) PDF yolunu olduğu kadar görüntü
+yolunu da etkiler. Görüntü yolunun pitch doğruluğu ayrıca ölçülmedi.
+
 ### `PDFOMRService` — pitch bugları burada, değiştirilmesi/kaldırılması değerlendiriliyor
+
+Metodlar (satır numaraları 2026-11-09 itibarıyla): `process_pdf` (544),
+`_group_staff_lines` (598), `_detect_treble_staffs` (623),
+`_detect_notes_in_staff` (677), `_detect_tempo_pdf` (726),
+`_detect_time_sig_pdf` (740), `_split_blob` (758).
 
 `TREBLE_MAP` sözlüğü (hem modül seviyesinde hem `PDFOMRService` sınıfı
 içinde ayrı ayrı tanımlı — ikisi de düzeltildi), staff üzerindeki "step"
