@@ -46,13 +46,19 @@ def rate_limit(ad: str, max_istek: int, pencere: int = 60):
         _rate_store[anahtar] = kayitlar
     return Depends(kontrol)
 
+# CORS: yalnızca frontend'in yayınlandığı alan adı ve yerel geliştirme adresleri kabul edilir.
+# Frontend /api'yi göreli yoldan çağırdığı için (aynı origin, nginx) bu liste dışarıdan erişimi kısıtlar.
+# Kimlik bilgisi (cookie) kullanılmadığı için allow_credentials kapalı.
 app.add_middleware(
     CORSMiddleware,
-    # DİKKAT: her kaynaktan istek kabul ediliyor (*). Canlıda alan adı listesiyle sınırlanmalı.
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[
+        "https://fretflow.dehateknikservis.com",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_headers=["Content-Type"],
 )
 
 omr_svc = OMRService()
@@ -198,7 +204,8 @@ async def vote_tab(tab_id: int, vote: dict, db: Session = Depends(get_db), _hiz=
     if not tab:
         raise HTTPException(status_code=404, detail="TAB bulunamadı")
 
-    # Kimlik doğrulama yok: istemcinin bildirdiği user_level/user_id'ye güvenilmez (güven puanı manipülasyonu)
+    # Kimlik doğrulama yok: istemcinin bildirdiği user_level/user_id'ye güvenilmez (güven puanı manipülasyonu).
+    # Tüm anonim oylar en düşük ağırlıkla sayılır.
     weight = trust_svc.get_level_weight("beginner")
     if vote.get("type") not in ("rate", "accuracy"):
         raise HTTPException(status_code=422, detail="type rate veya accuracy olmalı")
@@ -212,8 +219,10 @@ async def vote_tab(tab_id: int, vote: dict, db: Session = Depends(get_db), _hiz=
 
     db_vote = TabVote(
         tab_id=tab_id,
-        # DİKKAT: giriş olmadığı için her oy 1 numaralı kullanıcı adına yazılır; aynı kişi defalarca oy verebilir.
-        user_id=1,
+        # Anonim oy: user_id boş bırakılır. Eskiden sabit 1 yazılıyordu; users tablosunda 1 numaralı kullanıcı
+        # yoksa FK hatası veriyordu. Aynı kişinin tekrar oy vermesini engellemek için oy kimliği gerekir
+        # (şema değişikliği gerektirir; BACKLOG'da).
+        user_id=None,
         vote_type=vote["type"],
         value=deger,
         user_level_weight=weight,
