@@ -13,14 +13,18 @@
    - **Teyit bekleyen:** `fretflow_db` içeriği 18 Ekim geçiş dump'ıyla aynı
      (users 0, sheet_uploads 4, tab_versions 4, tab_votes 0; son kayıt
      2026-07-14). Kayıp kullanıcı/oy verisi olmadığı sahibi tarafından teyit edilmeli.
-2. **`fretflow.service` enable durumu — teyit bekliyor.** Servis şu an
-   127.0.0.1:8010'da çalışıyor (`/health` 200). Son bilinen durum `disabled`
-   idi; reboot sonrası kalkıp kalkmayacağı teyit edilmeli.
+2. **`fretflow.service` enable durumu — ✅ enabled (doğrulandı).** 2026-11-09
+   kontrolünde servis `enabled` ve `active`; `Restart=always` olduğu doğrulandı.
+   Reboot sonrası açılış yalnızca gözlemle (sunucuda reboot ile) teyit edilebilir.
 3. **Güvenlik:** CORS `*`, `user_id=1` sabiti (kimlik doğrulama yok). Ayrı
    PR'larda ele alınacak (BACKLOG.md).
 4. **oemer testi** (aşağıda) — bekliyor.
 5. **Eski Docker `fretflow` container'ı** — AutoSleep yönetiminde. systemd
    servisiyle çakışma kontrolü başka bir ajanda; bu repoda değişiklik yok.
+6. **Dış erişim notu.** `fretflow.dehateknikservis.com` için `/api/tab/1` ve
+   `/health` 404 dönüyor; `selimkilic.online` 200 dönüyor. Bu, CORS listesine
+   `selimkilic.online` eklenmesinin nedeni. Dış alan adının nginx'te hangi
+   vhost'a bağlı olduğu henüz doğrulanmadı.
 
 ## ✅ TAMAMLANDI (2026-11-09) — Repo Temizliği ve Sunucu Eşitleme
 
@@ -48,7 +52,7 @@ Doğrulama:
 
 - Test: `/tmp/nota_page1.png` (PDF'den 3x render) üzerinde `oemer` (`/opt/oemer_venv`, oemer 0.1.8) çalıştırıldı; ~12 dk sürdü, MusicXML üretildi.
 - Beklenen ilk 10 pitch: `G4 G4 A4 G4 E4 F4 E4 D4 E4 D4`.
-- **oemer:** 121 nota üretti, ilk 10: `C4 D4 E4 D4 C4 D4 E4 D4 C4 G4` → **2/10** (aşırı tespit var).
+- **oemer:** 121 nota üretti, ilk 10: `C4 D4 E4 D4 C4 D4 E4 D4 C4 G4` → **2/10** (PDF'deki gerçek nota sayısı doğrulanmadı; 'aşırı tespit' yorumu kanıtlanmadı).
 - **Mevcut OpenCV pipeline (`PDFOMRService`, üretim):** 55 nota, ilk 10: `D4 E4 C4 C4 C4 D4 C4 B3 G4 D5` → **0/10**.
 - Sonuç: İki yaklaşım da kabul eşiğini geçmiyor. oemer'i üretime almak için karar verilmedi; üretim pipeline'ı değişmedi. Bir sonraki adım: `TREBLE_MAP`/staff tespiti için ayrı bir doğruluk iyileştirmesi (BACKLOG'a bakın).
 
