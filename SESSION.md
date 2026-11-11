@@ -11,17 +11,18 @@
 | Bug #3 — `_split_blob` patch'inin dosyada var mı | ✅ Doğrulandı, var (satır 758) |
 | **Production venv** | ✅ RESTORE EDİLDİ — `pip check` temiz, servis sağlıklı çalışıyor |
 | **Bug #4 — `TREBLE_MAP` off-by-one** | ✅ Bulundu ve düzeltildi (hem modül hem class seviyesi) |
-| **Sayısal doğrulama (kabul testi)** | ❌ Henüz yapılmadı — bir sonraki oturumda ilk iş |
-| **Yaklaşım kararı** | 🔄 Custom OpenCV pipeline'dan **oemer**'e geçiş kararlaştırıldı, bağımsız araştırmayla desteklendi |
-| **oemer kurulumu/testi** | 🔄 İzole venv (`/opt/oemer_venv`) hazır ama test PNG üzerinde henüz ÇALIŞTIRILMADI (kaldığımız yer) |
+| **Sayısal doğrulama (kabul testi)** | ✅ 2026-11-09 yapıldı: oemer 2/10, OpenCV (üretim) 0/10 — eşik geçilmedi (bkz. §20) |
+| **Yaklaşım kararı** | 🔄 oemer denendi (2/10), OpenCV 0/10. Hangi yolun üretime alınacağı kararı sahibinde (TASK.md "AKTİF") |
+| **oemer kurulumu/testi** | ✅ `/opt/oemer_venv` içinde çalışıyor; test PNG'de ölçüldü (bkz. §20) |
 | **Repo temizliği (2026-11-09)** | ✅ `app/` (kök) ve `smart-tab/` kaldırıldı (PR #1); `omr_service.py.bak` kaldırıldı, `.gitignore`'a `*.bak` eklendi. Üretim kodu `backend/` altında |
 | **requirements.txt** | ✅ `pymupdf==1.28.0` sabitlendi (PR #2) |
 | **main.py / config.py eşitleme** | ✅ Sunucudaki dosyalarla birebir eşitlendi (PR #3). Repoda artık sunucudaki güvenlik/hız sınırı kodu da var (bkz. §18) |
 | **SECRET_KEY** | ✅ Varsayılan kaldırıldı, zorunlu (PR #4). Sunucu `.env` içinde 64 karakterlik değer var (değer repoda yok) |
 | **omr_service.py (repo ↔ sunucu)** | ✅ AST düzeyinde aynı; sunucuda yalnızca fazladan docstring/yorum var. `TREBLE_MAP` düzeltmesi iki tarafta da var |
 | **Servis DB bağlantısı** | ✅ Çözüldü — uygulama Docker `postgres-ortak` (127.0.0.1:5434) / `fretflow_db` / `uygulama` rolüne bağlı; `/health` 200. Veri eşleşmesi sahibi teyidi bekliyor (bkz. §19) |
-| **fretflow.service enable durumu (TEYİT BEKLİYOR)** | ⏳ Servis çalışıyor; son bilinen durum `disabled` (§18). Reboot sonrası kalkıp kalkmayacağı teyit edilmedi (bkz. §19) |
-| **🔴 Güvenlik (AÇIK)** | ⚠️ CORS `*`, `user_id=1` sabiti (giriş yok), kimlik doğrulama yok — ayrı PR'larda ele alınacak (BACKLOG.md) |
+| **fretflow.service enable durumu** | ✅ `enabled` + `active`, `Restart=always` (2026-11-11 doğrulandı). Reboot testi yapılmadı (bkz. §20) |
+| **Güvenlik** | ✅ CORS allowlist (PR #7/#10); oylar `user_id=NULL` (PR #7). ⚠️ Tekrar oy engeli ve kimlik doğrulama henüz yok (BACKLOG.md) |
+| **Dış alan adı** | ✅ Canlı alan adı `selimkilic.online`. `fretflow.dehateknikservis.com` yayında değil (vhost pasif, sertifika yok) — karar bekliyor (§20) |
 
 ---
 
@@ -183,6 +184,9 @@ için etiketli yeni overlay gerekiyor (bkz. §14 sonu, açık kalan iş).
 
 ## 18. 2026-11-09 — Repo Temizliği, Sunucu Eşitleme ve Açık Sorunlar
 
+> **Tarihsel bölüm:** Bu, 2026-11-09 sabahki durumun kaydıdır. Sonraki güncel
+> durum §19 ve §20'dedir (ör. `fretflow.service` artık `enabled`; CORS artık allowlist).
+
 Bu oturumda yalnızca dokümanlar güncellendi; kod değiştirilmedi. Sunucuya
 bağlanılmadı; sunucu ile ilgili maddeler kullanıcının bildirdiği
 gözlemlerdir ve repodan doğrulanamaz.
@@ -222,17 +226,16 @@ gözlemlerdir ve repodan doğrulanamaz.
 
 ### 🔴 AÇIK — Diğer (2026-11-09 güncel durum: §19)
 
-- `fretflow.service` sunucuda `disabled` (reboot'ta kalkmaz). — araştırılıyor
-- Güvenlik: CORS `*`, `user_id=1` sabiti, kimlik doğrulama yok. — araştırılıyor, çözülmedi
-- oemer testi (TASK.md) hâlâ bekliyor; kabul testi (`Dogruluk: x/10`) ölçülmedi.
+- ~~`fretflow.service` sunucuda `disabled`~~ — tarihsel; 2026-11-11'de `enabled` (§20).
+- ~~Güvenlik: CORS `*`, `user_id=1` sabiti~~ — tarihsel; CORS allowlist ve `user_id=NULL` (PR #7, #10). Tekrar oy engeli açık.
+- ~~oemer testi bekliyor~~ — tarihsel; 2026-11-09 kabul testi yapıldı (2/10, §20).
 
 ---
 
 ## 19. 2026-11-09 — DB Bağlantısı Çözüldü (veri teyidi bekliyor)
 
-Bu bölüm §18'deki DB açığının güncel durumudur. Claude sunucuya bağlanmadı;
-aşağıdaki sunucu bilgileri kullanıcının doğrulamasıdır (repodan doğrulanamaz).
-Bu oturumda kod değiştirilmedi.
+Bu bölüm §18'deki DB açığının güncel durumudur. Bu bölümün yazıldığı anda
+sunucu bilgileri kullanıcı doğrulamasıydı; sonraki SSH kontrolleri §20'de.
 
 ### Doğrulanmış durum (sunucu, kullanıcı doğrulaması)
 
@@ -260,12 +263,77 @@ Bu oturumda kod değiştirilmedi.
 
 ### Açık kalanlar
 
-- `fretflow.service` enable durumu teyit bekliyor (son bilinen `disabled`, §18).
-- Docker `fretflow` container'ı (eski kurulum, AutoSleep yönetiminde): systemd
-  servisiyle çakışma kontrolü başka bir ajanda yapılıyor. Bu konuda değişiklik
-  yapılmadı; yalnızca kayıt altına alındı.
-- CORS `*` ve `user_id=1` sabiti: ayrı PR'larda ele alınacak (BACKLOG.md).
-- oemer testi (TASK.md) hâlâ bekliyor.
+- ~~`fretflow.service` enable durumu teyit bekliyor~~ — 2026-11-11'de `enabled` (§20). Reboot testi hâlâ açık.
+- Docker `fretflow` container'ı: §20'de `restart=no`, `exited` olarak doğrulandı; silinmedi.
+- ~~CORS `*` ve `user_id=1` sabiti~~ — düzeltildi (PR #7, #10); tekrar oy engeli açık.
+- ~~oemer testi bekliyor~~ — yapıldı (§20).
+
+---
+
+## 20. 2026-11-09 (öğleden sonra) – 2026-11-11 — Sunucu Düzeltmeleri, Git Onarımı, Doküman Gözden Geçirmesi
+
+### Yapılan değişiklikler
+
+- **PR #10** (`8cc856b`, squash): CORS allowlist'e `https://selimkilic.online`
+  eklendi (mevcut üç girdi korundu). TASK/BACKLOG notları düzeltildi
+  (oemer "aşırı tespit" yorumu kaldırıldı; enable durumu, dış erişim notu).
+- **Sunucu — systemd unit:** `/etc/systemd/system/fretflow.service`
+  içinde `Requires=postgresql.service` kaldırıldı, `After=…docker.service` ve
+  `Wants=docker.service` eklendi. Yedek: `fretflow.service.bak_20261109212332`.
+  `daemon-reload` yapıldı; servis restart edilmedi.
+- **Sunucu — `app/main.py`:** sunucudaki dosya repo sürümünden yalnızca
+  `selimkilic.online` satırı eksikti. Tek satır eklendi (yedek:
+  `main.py.bak_20261109212938`), servis restart edildi.
+  Doğrulama: `/health` 200; `selimkilic.online` origin'i için
+  `access-control-allow-origin` dönüyor; `evil.example` için dönmüyor.
+- **PR #11** (`735dff0`, squash): TASK.md ve BACKLOG.md'de nginx bulgusu ve
+  sunucu değişikliklerinin kaydı.
+
+### Nginx bulgusu (salt okunur)
+
+- Canlı FretFlow vhost'u: `/etc/nginx/sites-available/selimkilic.online`
+  (`sites-enabled`'da var); `/api` ve `/health` → `127.0.0.1:8010`.
+- `fretflow.dehateknikservis.com`: `sites-available/fretflow` dosyası var ama
+  `sites-enabled`'da bağlantısı yok. 80. port bloğu `return 404` veriyor;
+  443 bloğu `/etc/letsencrypt/live/fretflow.dehateknikservis.com/` altındaki
+  sertifikaya bağlı, ama bu sertifika yok. Yani alan adı pasif — kod hatası değil.
+- Seçenekler (karar sunucu sahibinde): vhost'u açıp sertifika üretmek ya da
+  alan adını ve CORS girdisini kaldırmak. Şu an CORS listesinde zararsız duruyor.
+
+### Git onarımı (yerel repo)
+
+- Oturum kesintisinden sonra yerel `.git`'te `8cc856b…` commit nesnesi **0 bayt**
+  bir dosya olarak kalmıştı; `refs/heads/main` bu commit'e işaret ediyordu.
+  Aynı anda `BACKLOG.md`, `TASK.md`, `backend/app/main.py` dosyaları da 0 bayta
+  dönmüştü. Yarım kalan bir `git pull` olası nedendi; kesin kanıtlanamadı.
+- Onarım: boş nesne dosyası silindi, `git fetch origin` ile uzak nesne
+  yeniden çekildi (uzak `main` = `8cc856b`, doğrulandı), üç dosya
+  `git checkout -- <dosya>` ile commit'lenmiş sürümlerine döndü. Commit'ten
+  kaybolan kullanıcı içeriği yoktu (dosyalar zaten boştu).
+
+### Ajanlarla ilgili not
+
+- Paralel ajan çağrıları oturum kesintisinde iptal oldu. Repo ajanı PR #10'u
+  zaten birleştirmişti; sunucu ajanı unit değişikliğini uygulamış ama nginx
+  incelemesini bitirememişti. Kalan işleri ana oturum tamamladı.
+
+### 2026-11-11 salt okunur kontrol
+
+- `fretflow`: `enabled`, `active`; `Requires` yalnızca `-.mount`, `system.slice`, `sysinit.target`; `Wants/After` `docker.service`.
+- `/health` 200; sunucudaki `main.py`'de `selimkilic.online` var.
+- Docker: `fretflow` → `restart=no`, `Exited (0)` (4 gün önce); `postgres-ortak` →
+  `restart=unless-stopped`, `healthy`, `127.0.0.1:5434`.
+- `postgresql.service` hâlâ `active` (sarmalayıcı). Yerel küme/veri dizini bu
+  turda incelenmedi; §19'daki "veri dizini yok" bulgusu geçerli.
+- Sunucu backup dosyaları (`main.py.bak_*`, unit `.bak_*`) gizli değer içermez;
+  `.env.bak_*` içerir (BACKLOG).
+
+### Doküman gözden geçirmesi (2026-11-11)
+
+Altı md dosyası (`README.md`, `ARCHITECT.md`, `SESSION.md`, `TASK.md`,
+`BACKLOG.md`, `CLAUDE.md`) kodla ve sunucu durumuyla karşılaştırıldı; eski
+ifadeler (CORS `*`, `user_id=1`, `fretflow.service disabled`, oemer "henüz
+çalıştırılmadı") düzeltildi.
 
 ---
 

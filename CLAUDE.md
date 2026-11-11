@@ -26,7 +26,9 @@ sistem notaları tespit edip gitar üzerinde çalınabilir pozisyonlara
 | Veritabanı (production) | Docker `postgres-ortak` — `127.0.0.1:5434`, veritabanı `fretflow_db`, rol `uygulama`. Bağlantı `/opt/fretflow/backend/.env` içindeki `DATABASE_URL` ile tanımlı (gerçek değer bu dosyada/dokümanda yok) |
 | Docker dönemi bağlantısı | `/opt/fretflow/.env` — Docker dönemine ait; güncel bağlantı için `backend/.env`'e bakın |
 | Kullanılmayan yerel DB | Yerel PostgreSQL 16 `main` (5432) — veri dizini yok, kullanılmıyor |
-| Eski Docker container | `fretflow` (AutoSleep yönetiminde) — systemd servisiyle çakışma kontrolü başka bir ajanda; bu repoda değişiklik yapılmadı |
+| Eski Docker container | `fretflow` — `restart=no`, `exited`; silinmedi. AutoSleep kaydı hâlâ bu container'a işaret ediyor (bkz. BACKLOG.md) |
+| systemd unit | `fretflow.service`: `enabled`, `Restart=always`; `After`/`Wants=docker.service` (`postgresql.service` bağımlılığı 2026-11-09'da kaldırıldı). Yedek: `/etc/systemd/system/fretflow.service.bak_20261109212332` |
+| SSH erişimi | `ssh -i ~/.ssh/contabo_95_111_242_96_ed25519 -o IdentitiesOnly=yes root@95.111.242.96` (varsayılan anahtar çalışmaz; `IdentitiesOnly` gerekli) |
 | SECRET_KEY | Zorunlu (varsayılan yok). Değeri yalnızca sunucudaki `.env` içinde; repoda ve dokümanda yok |
 | Sunucu yedekleri | Geçiş dump'ı: `/root/yedekler/fretflow-gecis-20261018-2121/fretflow_db.dump`; `.env` yedeği: `/opt/fretflow/backend/.env.bak_20261109095730` (gizli değer içerir) |
 | Test PDF | `/tmp/nota.pdf` (kaynağı: `cp "/var/tmp/Yeni Proje.pdf" /tmp/nota.pdf`) |
@@ -55,14 +57,20 @@ zaman kaybına ve production'ı bozma riskine yol açtı — iki kez yaşandı
 açıkça belirt, kullanıcı da her `pip install` öncesi prompt'a bakıp doğru
 ortamda olduğunu teyit etsin.
 
-## ⚠️ Kritik Kısıtlama: Claude'un Sunucuya Erişimi YOK
+## ⚠️ Kritik Kısıtlama: Sunucu Erişimi Oturuma Bağlı
 
-Claude'un kendi sandbox'ı **izole** — `95.111.242.96` sunucusuna SSH/network
-erişimi yok. İş akışı şöyle:
-1. Claude bir kod değişikliği / komut önerir
-2. **Kullanıcı** bunu kendi SSH oturumunda sunucuda çalıştırır
-3. Kullanıcı çıktıyı/log'u (ve varsa görselleri) Claude'a yapıştırır/yükler
-4. Claude çıktıyı analiz edip bir sonraki adımı önerir
+Claude'un sunucuya (`95.111.242.96`) erişimi **oturuma bağlıdır**; varsayılan
+kabul edilmez. 2026-11-09'da kullanıcı onayıyla SSH erişimi kullanıldı (yukarıdaki
+"SSH erişimi" satırı). Kurallar:
+
+- Sunucuda değişiklik yalnızca kullanıcının onayladığı kapsamda yapılır.
+- Değişiklikten önce yedek alınır (`.bak_<tarih>`), sonrasında doğrulanır.
+- `.env` içeriği, şifre, `SECRET_KEY` veya `DATABASE_URL` değeri hiçbir çıktıya,
+  dokümana veya commit'e yazılmaz; yalnızca anahtar adı/uzunluk.
+- Production venv (`/opt/fretflow/venv`) için deneysel paket kurulmaz; oemer
+  yalnızca `/opt/oemer_venv` içinde.
+- Erişim yoksa (ör. oturum yeni başladıysa) iş akışı şöyledir: Claude komut
+  önerir, **kullanıcı** kendi SSH oturumunda çalıştırır, çıktıyı Claude'a yapıştırır.
 
 Claude kendi sandbox'ında (network erişimi kısıtlı, sadece pip/npm/apt
 registry'leri) PDF'i işleyip **görsel doğrulama / bağımsız test / genel
@@ -96,11 +104,10 @@ hataya bir kez düşüldü (bkz. SESSION.md §16).
 - `music21==9.1.0` — MusicXML/MIDI parse (en güvenilir yol, dokunulmuyor)
 - `pytesseract` — tempo/time-signature OCR
 - SQLAlchemy + Alembic + psycopg2 — veritabanı katmanı
-- python-jose + passlib[bcrypt] — kimlik doğrulama
-- **Değerlendirilen/test edilen alternatif:** `oemer` (deep-learning tabanlı
-  OMR aracı, MusicXML üretir) — custom OpenCV pipeline'ının PDF yolundaki
-  yerini alma adayı, izole venv'de (`/opt/oemer_venv`) test ediliyor
-  (bkz. TASK.md)
+- python-jose + passlib[bcrypt] — requirements'ta; kimlik doğrulama henüz kodda yok
+- **Değerlendirilen alternatif:** `oemer` (deep-learning tabanlı OMR aracı,
+  MusicXML üretir) — izole venv'de (`/opt/oemer_venv`) çalışıyor; tek sayfa
+  kabul testinde 2/10, OpenCV 0/10. Üretim kararı bekliyor (bkz. TASK.md)
 
 ## Kod İçi Dil Kuralı
 

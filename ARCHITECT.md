@@ -2,17 +2,27 @@
 
 > Bu dosya `omr_service.py`'nin yapısını anlatır. Kod değiştikçe güncellenmeli.
 
-## Repo ve Kod Durumu (2026-11-09)
+## Repo ve Kod Durumu (2026-11-11)
 
 - Üretim kodu `backend/` altındadır (`backend/app/...`). Kök `app/` ve
   `smart-tab/` kaldırıldı (PR #1).
 - `backend/app/services/omr_service.py` repo ve sunucuda AST düzeyinde aynı
   (sunucuda yalnızca fazladan docstring/yorum var).
 - `backend/app/main.py` ve `backend/app/core/config.py` sunucuyla eşitlendi (PR #3).
-  Bu dosyalardaki hız sınırı, Swagger kapatma, oy doğrulaması, `user_id=1`
-  sabiti ve CORS `*` ayarları OMR mimarisinin parçası değildir, ama repoda
-  bulunur.
+  Bu dosyalardaki ayarlar OMR mimarisinin parçası değildir, ama repoda bulunur:
+  - IP başına hız sınırı (upload 10/dk, edit 20/dk, vote 30/dk).
+  - Swagger/OpenAPI kapalı (`docs_url=None`, `openapi_url=None`).
+  - CORS allowlist (PR #7/#10): `fretflow.dehateknikservis.com` (pasif, bkz. SESSION §20),
+    `selimkilic.online`, `localhost:5173`, `127.0.0.1:5173`; `allow_credentials=False`.
+  - Oy (`POST /api/tab/{id}/vote`): tür `rate`/`accuracy`, değer 0–5; oy
+    `user_id=NULL` ile yazılır (anonim). Kimlik doğrulama yok; tekrar oy engeli yok.
 - `SECRET_KEY` zorunludur (PR #4). `pymupdf==1.28.0` sabitli (PR #2).
+- `requirements.txt` içinde `python-jose`, `passlib[bcrypt]` ve `alembic`
+  bulunuyor ama kodda kullanılmıyor (kimlik doğrulama ve migrasyon henüz yok).
+- Veritabanı şeması: `tab_votes.user_id` NULL kabul ediyor, FK `users(id)`
+  duruyor. `Base.metadata.create_all` yalnızca eksik tabloyu oluşturur; kolon
+  eklemez (şema değişikliği için ALTER gerekir).
+- `backend/debug_omr.py` repoda da bulunur (eski notta yalnızca sunucudaydı).
 - **Veritabanı bağlantısı (2026-11-09):** Uygulama `DATABASE_URL` ile Docker
   `postgres-ortak` (127.0.0.1:5434) içindeki `fretflow_db` veritabanına,
   `uygulama` rolüyle bağlanır. Yerel PostgreSQL 5432 kullanılmıyor. Ayrıntı: SESSION.md §19.
@@ -72,8 +82,8 @@ bağlanabilir (o yol `music21` ile güvenilir çalışıyor). Böylece
 `_detect_notes_in_staff`, `find_blobs`, `_split_blob`, `TREBLE_MAP`)
 gereksiz hale gelebilir.
 
-**Önerilen hedef mimari (henüz uygulanmadı, kurulum sorunları nedeniyle
-bloklu — bkz. TASK.md):**
+**Önerilen hedef mimari (henüz uygulanmadı; oemer kurulumu çözüldü, ancak
+kabul testinde eşik geçilmedi — karar bekliyor, bkz. TASK.md):**
 ```
 process_file(bytes, filename)
   ├─ .xml/.musicxml/.mxl  → _parse_musicxml()          → music21
@@ -255,4 +265,5 @@ otomatik olarak debug scriptine de yansıyor.
 kutusunun üzerinde tespit edilen isim (örn. `D4`, `G4`) görünüyor, gözle
 doğrulama kolaylaştı.
 
-Tam script sunucuda `/opt/fretflow/backend/debug_omr.py` içinde mevcut.
+Tam script repoda (`backend/debug_omr.py`) ve sunucuda
+(`/opt/fretflow/backend/debug_omr.py`) bulunuyor.
