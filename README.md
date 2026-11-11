@@ -5,11 +5,12 @@ Nota (sheet music) verisinden otomatik **gitar tab'ı** üreten bir OMR
 MusicXML, MIDI veya görüntü) yükler; sistem notaları tespit edip gitar
 üzerinde çalınabilir pozisyonlara (string / fret / finger) çevirir.
 
-> **Durum (2026-11-09):** Aktif geliştirme. Sunucuda `fretflow` servisi
-> (systemd, 127.0.0.1:8010) çalışıyor, `/health` 200. Veritabanı: Docker
-> `postgres-ortak` (127.0.0.1:5434), `fretflow_db`, `uygulama` rolü; veri
-> eşleşmesi teyit bekliyor (SESSION.md §19). PDF→OMR yolunda bilinen bir
-> pitch-doğruluğu sorunu var (bkz. [Bilinen Sorunlar](#bilinen-sorunlar-ve-güncel-durum)).
+> **Durum (2026-11-11):** Aktif geliştirme. Sunucuda `fretflow` servisi
+> (systemd, `enabled`, 127.0.0.1:8010) çalışıyor, `/health` 200. Canlı alan adı
+> `selimkilic.online`. Veritabanı: Docker `postgres-ortak` (127.0.0.1:5434),
+> `fretflow_db`, `uygulama` rolü; veri eşleşmesi teyit bekliyor (SESSION.md §19).
+> PDF→OMR yolunda pitch doğruluğu düşük: oemer 2/10, mevcut OpenCV 0/10 (kabul
+> testi, bkz. [Bilinen Sorunlar](#bilinen-sorunlar-ve-güncel-durum)).
 
 ---
 
@@ -110,7 +111,7 @@ planlanıyor.
 - **pytesseract** — tempo / time-signature OCR
 - **SQLAlchemy** + **Alembic** + **psycopg2** — veritabanı katmanı
 - **Pydantic** / **pydantic-settings** — konfigürasyon ve veri doğrulama
-- **python-jose** + **passlib\[bcrypt\]** — kimlik doğrulama
+- **python-jose** + **passlib\[bcrypt\]** — requirements'ta, ama kimlik doğrulama henüz kodda yok
 - **Değerlendirilen alternatif:** [`oemer`](https://github.com/BreezeWhite/oemer)
   — deep-learning tabanlı OMR aracı, custom OpenCV pipeline'ının PDF
   yolundaki yerini alma adayı
@@ -183,11 +184,16 @@ print(result['omr_data']['notes'])
 - **Servis DB bağlantısı** — uygulama Docker `postgres-ortak` (127.0.0.1:5434)
   / `fretflow_db` / `uygulama` rolüne bağlı; yerel PostgreSQL 16 `main` (5432)
   kullanılmıyor (veri dizini kayıp). Veri eşleşmesi teyit bekliyor (SESSION.md §19).
+- **`fretflow.service` açılışta kalkıyor** — `enabled`, `active`; unit'ten
+  `postgresql.service` bağımlılığı kaldırıldı, `docker.service` eklendi (2026-11-09).
+- **CORS** — `*` değil; allowlist (`selimkilic.online` dahil) (PR #7, #10).
+- **Anonim oylar** — `user_id=NULL` (PR #7); `user_id=1` sabiti kaldırıldı.
 
 ### 🟡 Teyit bekleyen / açık
 
-- **`fretflow.service` enable durumu** — reboot sonrası kalkıp kalkmayacağı teyit edilmedi.
-- **Güvenlik:** CORS `*`, `user_id=1` sabiti (kimlik doğrulama yok) — ayrı PR'larda ele alınacak.
+- **Reboot testi** — `enabled` doğrulandı ama sunucu reboot'u ile açılış gözlemlenmedi.
+- **Tekrar oy engeli ve kimlik doğrulama** — henüz yok (şema değişikliği gerekir; BACKLOG.md).
+- **Dış alan adı `fretflow.dehateknikservis.com`** — yayında değil (vhost pasif, sertifika yok); karar sunucu sahibinde.
 
 ### 🔄 Devam Ediyor
 
@@ -203,12 +209,9 @@ print(result['omr_data']['notes'])
   desteklemek değerlendiriliyor ve bağımsız açık kaynak projelerle
   (`PDF2Muse`, `homr`, karşılaştırmalı OMR benchmark'ları) bu yaklaşımın
   makul olduğu teyit edildi.
-- **`oemer` kurulumu** — izole venv'de (`/opt/oemer_venv`) bağımlılık
-  çakışması yaşandı: `oemer`'in çektiği güncel `scipy`/
-  `opencv-python-headless` sürümleri `numpy>=2` istiyor, ancak ONNX model
-  hatasını çözen `onnxruntime==1.17.0` `numpy<2` gerektiriyor. Çözüm
-  yolları (`--use-tf` bayrağı ile TensorFlow checkpoint kullanmak, ya da
-  bağımlılıkları elle sabitlemek) deneniyor.
+- **`oemer` kurulumu** — izole venv'de (`/opt/oemer_venv`) çalışıyor (oemer
+  0.1.8, bağımlılık çakışmaları çözüldü, SESSION.md §11-14). Kabul testi
+  (tek sayfa, 10 nota): oemer **2/10**. Entegrasyon kararı bekliyor (TASK.md).
 
 ### Kabul Kriteri (pitch doğruluğu için)
 
@@ -243,10 +246,10 @@ print('Dogruluk:', sum(a == b for a, b in zip(omr, beklenen)), '/10')
 - [x] Staff çizgi gruplama hatasını düzelt
 - [x] Nota yüksekliği filtresi sınır hatasını düzelt
 - [x] `TREBLE_MAP` off-by-one hatasını düzelt
-- [ ] `oemer`'i izole venv'de çalışır hale getirmek (bağımlılık çakışması
-      çözülmeli: `numpy`/`scipy`/`opencv`/`onnxruntime` sürüm uyumu)
-- [ ] `oemer` çıktısını (MusicXML) `_parse_musicxml()` ile test etmek,
-      pitch doğruluğunu kabul kriteriyle ölçmek
+- [x] `oemer`'i izole venv'de çalışır hale getirmek (`/opt/oemer_venv`)
+- [x] `oemer` çıktısını (MusicXML) test etmek, pitch doğruluğunu kabul
+      kriteriyle ölçmek (2/10 — eşik geçilmedi)
+- [ ] Tekrarlanabilir OMR ölçümü (birden fazla sayfa) ve üretim yolu kararı
 - [ ] Başarılıysa: `PDFOMRService`'e `subprocess` tabanlı `oemer`
       entegrasyonu eklemek, eski custom pipeline'ı kademeli olarak
       devre dışı bırakmak

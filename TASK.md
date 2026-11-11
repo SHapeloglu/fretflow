@@ -1,26 +1,27 @@
 # TASK.md — Şu Anki Görev
 
-## 🟡 AÇIK / TEYİT BEKLİYOR (2026-11-09)
+## 🟡 AÇIK / TEYİT BEKLİYOR (2026-11-11 gözden geçirildi)
 
-> Sunucu tarafı bilgileri kullanıcı doğrulamasıdır, repodan doğrulanamaz.
-> Ayrıntı: SESSION.md §19.
+> Sunucu bilgileri 2026-11-09 ve 2026-11-11 tarihlerinde SSH ile salt okunur
+> doğrulandı (değişiklik yapılan yerler ayrıca işaretli). Ayrıntı: SESSION.md §19–§20.
 
 1. **Servis DB bağlantısı — ✅ çözüldü, veri eşleşmesi teyit bekliyor.**
    - Uygulama Docker `postgres-ortak` (127.0.0.1:5434) içindeki `fretflow_db`
      veritabanına `uygulama` rolüyle bağlanıyor. `backend/.env` DATABASE_URL'i
      buna göre değiştirildi (eski dosya yedeği: `/opt/fretflow/backend/.env.bak_20261109095730`).
    - Yerel PostgreSQL 16 `main` (5432) kullanılmıyor; veri dizini kayıp.
+     (`postgresql.service` hâlâ `active` — sarmalayıcı servis; kaldırma/disable kararı BACKLOG'da.)
    - **Teyit bekleyen:** `fretflow_db` içeriği 18 Ekim geçiş dump'ıyla aynı
      (users 0, sheet_uploads 4, tab_versions 4, tab_votes 0; son kayıt
      2026-07-14). Kayıp kullanıcı/oy verisi olmadığı sahibi tarafından teyit edilmeli.
-2. **`fretflow.service` enable durumu — ✅ enabled (doğrulandı).** 2026-11-09
-   kontrolünde servis `enabled` ve `active`; `Restart=always` olduğu doğrulandı.
-   Reboot sonrası açılış yalnızca gözlemle (sunucuda reboot ile) teyit edilebilir.
-3. **Güvenlik:** CORS artık allowlist (PR #7/#10); oylar `user_id=NULL`. Tekrar
+2. **`fretflow.service` — ✅ enabled ve active (2026-11-11 doğrulandı).**
+   `Restart=always`. **Teyit bekleyen:** reboot testi yapılmadı; açılışın
+   gerçekten kalktığı yalnızca sunucuda reboot ile gözlemlenebilir (sahibi onayıyla).
+3. **Güvenlik:** CORS allowlist (PR #7/#10); oylar `user_id=NULL`. Tekrar
    oy engeli ve kimlik doğrulama açık (BACKLOG.md).
-4. **oemer testi** (aşağıda) — bekliyor.
-5. **Eski Docker `fretflow` container'ı** — AutoSleep yönetiminde. systemd
-   servisiyle çakışma kontrolü başka bir ajanda; bu repoda değişiklik yok.
+4. **oemer kabul testi — ✅ yapıldı (2/10), karar bekliyor.** Ayrıntı aşağıda.
+5. **Eski Docker `fretflow` container'ı** — `restart=no`, `exited`; silinmedi.
+   AutoSleep kaydı hâlâ bu container'a işaret ediyor. Silme kararı sahibinde (BACKLOG.md).
 6. **Dış erişim (doğrulandı, 2026-11-09).** Canlı FretFlow alan adı
    `selimkilic.online` (nginx `sites-enabled`, `/api` ve `/health` → 127.0.0.1:8010, 200).
    `fretflow.dehateknikservis.com` yayında değil: `sites-available/fretflow`
@@ -63,7 +64,7 @@ Doğrulama:
 - Beklenen ilk 10 pitch: `G4 G4 A4 G4 E4 F4 E4 D4 E4 D4`.
 - **oemer:** 121 nota üretti, ilk 10: `C4 D4 E4 D4 C4 D4 E4 D4 C4 G4` → **2/10** (PDF'deki gerçek nota sayısı doğrulanmadı; 'aşırı tespit' yorumu kanıtlanmadı).
 - **Mevcut OpenCV pipeline (`PDFOMRService`, üretim):** 55 nota, ilk 10: `D4 E4 C4 C4 C4 D4 C4 B3 G4 D5` → **0/10**.
-- Sonuç: İki yaklaşım da kabul eşiğini geçmiyor. oemer'i üretime almak için karar verilmedi; üretim pipeline'ı değişmedi. Bir sonraki adım: `TREBLE_MAP`/staff tespiti için ayrı bir doğruluk iyileştirmesi (BACKLOG'a bakın).
+- Sonuç: İki yaklaşım da kabul eşiğini geçmiyor. oemer'i üretime almak için karar verilmedi; üretim pipeline'ı değişmedi.
 
 ## ✅ TAMAMLANDI — `TREBLE_MAP` Off-by-One Fix
 
@@ -77,56 +78,31 @@ pitch'e eşlenmesine yol açan `TREBLE_MAP` hatası bulundu ve düzeltildi:
 - Servis restart edildi, yeni final nota listesi gözlemlendi (farklı ve
   daha çeşitli pitch'ler: D4, F4, G4, B4, C5, D5).
 
-**Henüz yapılmadı:** Kabul kriteriyle (aşağıda) sayısal doğrulama —
-`/tmp/nota.pdf` üzerinde 10 notalık test çalıştırılıp `Dogruluk: x/10`
-sonucu ölçülmedi. **Bir sonraki oturumda ilk iş bu olmalı** (aşağıdaki
-"Sıradaki Adım" bölümüne bak).
+**Sayısal ölçüm:** 2026-11-09 oemer kabul testinde üretim pipeline 0/10 ölçüldü
+(yukarıda). Fix'in tek başına etkisi (fix öncesi/sonrası karşılaştırma) ayrıca
+ölçülmedi; bu açık bir ölçüm.
 
-## 🔄 AKTİF — oemer Değerlendirmesi (Seçenek A, kullanıcı onayladı)
+## 🔄 AKTİF — OMR Kalite Kararı (oemer vs OpenCV)
 
-Bağımsız GitHub araştırması yapıldı (bkz. SESSION.md §15): `PDF2Muse` adlı
-bağımsız bir proje zaten "PDF → oemer → MusicXML" akışını üretimde
-kullanıyor — bu, planlanan mimarinin (ARCHITECT.md) makul olduğunu
-doğruluyor. `homr` (alternatif kütüphane) ve bir OMR benchmark projesi de
-bulundu.
+**Durum (2026-11-11):** oemer kurulu ve `/opt/oemer_venv` içinde çalışıyor
+(oemer 0.1.8). Kurulum sorunları çözüldü (SESSION.md §11-14). Ancak kabul
+testinde iki yaklaşım da eşiği geçmedi: oemer 2/10, OpenCV 0/10.
 
-**Sıradaki adım (kaldığımız yer):** `/opt/oemer_venv` içinde oemer'i test
-PNG (`/tmp/nota_page1.png`) üzerinde çalıştırıp gerçekten iyi sonuç verip
-vermediğini görmek. Henüz çalıştırılmadı — komutlar aşağıda hazır.
+Bağımsız araştırma (SESSION.md §15): `PDF2Muse` gibi projeler "PDF → oemer →
+MusicXML" akışını kullanıyor; bu yaklaşım makul. `homr` ve bir OMR benchmark
+projesi de var.
 
-```bash
-# 1. Venv durumunu kontrol et
-ls -la /opt/oemer_venv/bin/ 2>&1 | head -5
-source /opt/oemer_venv/bin/activate
-# prompt'ta (oemer_venv) olduğunu TEYİT ET
-pip list 2>&1 | grep -iE "oemer|onnxruntime|numpy|opencv"
+**Önerilen sıra (karar sahibinde):**
+1. Tek bir referans sayfayla (`/tmp/nota_page1.png`) yetinmeyip birkaç sayfayla,
+   tekrarlanabilir bir ölçüm kurmak (BACKLOG: "OMR doğruluk ölçümünü sürekli
+   hale getirmek"). Tek 10 notalık örnekle karar vermek güvenilir değil.
+2. Ölçüm sonucuna göre: oemer'i `/opt/oemer_venv` üzerinden `subprocess` ile
+   `PDFOMRService`'e bağlamak (ARCHITECT.md hedef mimari) veya OpenCV tarafında
+   staff/nota tespitini düzeltmeye devam etmek.
+3. Yeni bir motor (ör. `homr`) yalnızca 1 ve 2 sonuçsuz kalırsa değerlendirilsin.
 
-# 2. Test PNG üzerinde çalıştır (ilk çalıştırma yavaş olabilir, model yükleme dahil)
-cd /tmp
-time oemer /tmp/nota_page1.png -o /tmp/oemer_test/
-
-# 3. Çıktıyı kontrol et
-ls -la /tmp/oemer_test/
-```
-
-Eğer bağımlılık çakışması (numpy/scipy/opencv/onnxruntime) tekrar
-çıkarsa, önceki denemelerde (SESSION.md §12-13) bulunan çözüm yolları:
-
-1. **`--use-tf` bayrağı** (ONNX yerine TensorFlow checkpoint kullanır):
-   ```bash
-   source /opt/oemer_venv/bin/activate
-   pip install "numpy<2" tensorflow-cpu
-   oemer /tmp/nota_page1.png -o /tmp/oemer_out --use-tf
-   ```
-2. Eğer TF de sorun çıkarırsa: `scipy`/`opencv-python-headless`'i numpy<2
-   ile uyumlu ESKİ sürümlere manuel sabitle (`scipy<1.13`,
-   `opencv-python-headless<5`) — **SADECE `/opt/oemer_venv` içinde, prompt
-   `(oemer_venv)` olduğundan emin olarak.**
-3. Çalışırsa: `/tmp/oemer_test/` altındaki MusicXML çıktısını incele,
-   mevcut `_parse_musicxml()` ile parse edilebiliyor mu test et, sonra
-   pitch doğruluğunu aynı kabul testiyle ölç.
-4. Entegrasyon: `PDFOMRService`'e, `subprocess` ile `/opt/oemer_venv`'in
-   Python'unu çağıran yeni bir yol ekle (ARCHITECT.md'deki önerilen mimari).
+**Kurallar:** oemer yalnızca `/opt/oemer_venv` içinde; production venv'e
+(`/opt/fretflow/venv`) deneysel paket kurulmaz.
 
 ## Kabul Kriteri / Test (değişmedi)
 
@@ -145,20 +121,13 @@ print('Dogruluk:', sum(a==b for a,b in zip(omr,beklenen)), '/10')
 "
 ```
 
-## Yaklaşım — İki Paralel Seçenek
+## Yaklaşım — İki Yol, İkisi de Eşik Altında
 
-**Seçenek A (öncelikli, kullanıcı onayladı, ŞU AN AKTİF) — oemer'i izole
-venv'de çalışır hale getirip entegre et.** Detay yukarıda.
+- **Seçenek A — oemer (izole venv):** kuruldu, ölçüldü: 2/10.
+- **Seçenek B — OpenCV pipeline (TREBLE_MAP fix sonrası üretim):** ölçüldü: 0/10.
 
-**Seçenek B (yedek plan) — custom OpenCV pipeline'da TREBLE_MAP fix'inin
-yeterli olup olmadığını sayısal olarak doğrula, gerekirse devam et:**
-
-`TREBLE_MAP` fix'i uygulandı ama henüz kabul testiyle sayısal doğrulama
-yapılmadı. Eğer oemer kurulumu makul sürede çözülemezse veya sonuçları
-tatmin etmezse, önce şu kabul testi çalıştırılıp doğruluk oranı
-ölçülmeli; hâlâ yetersizse `_detect_notes_in_staff`'taki diğer olası
-hata kaynaklarına (gürültü/lyrics blob filtrelemesi, `spacing` tahmini)
-bakılabilir.
+Karar: yukarıdaki "Önerilen sıra". Ölçüm sayısı az olduğu için sonuçlar kesin
+değil; sadece bu tek sayfa için geçerli.
 
 ## Kapsam Dışı (şimdilik)
 
