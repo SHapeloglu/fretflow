@@ -90,6 +90,29 @@ async def upload_sheet(
     music_hash = result["music_hash"]
     omr_data = result["omr_data"]
 
+    # Fallback (okunamayan/tanınmayan dosya) her dosya için aynı örnek notaları ve
+    # aynı hash'i üretir; önbellekte aranmaz ve kalıcı kaydedilmez, yalnızca
+    # örnek TAB üretilip döner. Kayıt olmadığı için id/upload_id None'dır.
+    if omr_data.get("source") == "fallback":
+        tab_data = mapping_svc.map_notes_to_tab(omr_data)
+        return {
+            "cache_hit": False,
+            "music_hash": music_hash,
+            "upload_id": None,
+            "source": "fallback",
+            "tabs": [{
+                "id": None,
+                "category": "new",
+                "tab_data": tab_data,
+                "ascii_tab": render_tab(tab_data),
+                "accuracy_score": 0.0,
+                "rate_score": 0.0,
+                "trust_score": 0.0,
+                "vote_count": 0,
+                "accuracy_count": 0,
+            }],
+        }
+
     # Hash kontrolü — topluluk cache
     existing = db.query(SheetUpload).filter(
         SheetUpload.music_hash == music_hash
