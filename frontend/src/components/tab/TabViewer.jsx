@@ -72,6 +72,7 @@ function VotePanel({tabId}) {
 }
 
 export default function TabViewer({tabData,tabId,addToast,onEditSave}) {
+  const isSample=tabId==null
   const [notes,setNotes]=useState(tabData?.notes||[])
   const [editing,setEditing]=useState(null)
   const [playing,setPlaying]=useState(false)
@@ -269,7 +270,7 @@ export default function TabViewer({tabData,tabId,addToast,onEditSave}) {
                       }}>
                         {note&&(
                           <span
-                            onClick={()=>!playing&&setEditing(note===editing?null:note)}
+                            onClick={()=>!playing&&!isSample&&setEditing(note===editing?null:note)}
                             style={{
                               position:'relative',zIndex:2,
                               fontFamily:'var(--mono)',fontSize:12,fontWeight:700,
@@ -313,10 +314,12 @@ export default function TabViewer({tabData,tabId,addToast,onEditSave}) {
             ))}
           </div>
         </div>
-        {editing&&!playing&&<EditPanel note={editing} onSave={handleSave} onClose={()=>setEditing(null)}/>}
+        {editing&&!playing&&!isSample&&<EditPanel note={editing} onSave={handleSave} onClose={()=>setEditing(null)}/>}
       </div>
 
-      <VotePanel tabId={tabId}/>
+      {isSample
+        ?<div className="vote-bar"><span style={{fontSize:12,color:'var(--t3)'}}>Örnek veri: bu dosya tanınmadı, sonuç kaydedilmez, oy verilemez.</span></div>
+        :<VotePanel tabId={tabId}/>}
     </div>
   )
 }
