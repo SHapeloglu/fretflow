@@ -12,7 +12,7 @@ export default function TabList({ tabs, activeId, onSelect }) {
         const pct = Math.min(100, Math.round(tab.trust_score*100))
         const color = tab.trust_score>0.7?'var(--green)':tab.trust_score>0.4?'var(--amber)':'var(--purple2)'
         return (
-          <div key={tab.id} className={`ver-card ${activeId===tab.id?'active':''}`} onClick={()=>onSelect(tab)}>
+          <div key={tab.id??'fallback'} className={`ver-card ${activeId===tab.id?'active':''}`} onClick={()=>onSelect(tab)}>
             <div className="ver-top">
               <span className={`badge badge-${tab.category}`}>{LABELS[tab.category]}</span>
             </div>

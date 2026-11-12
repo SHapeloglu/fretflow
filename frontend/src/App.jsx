@@ -43,7 +43,7 @@ export default function App() {
         </aside>
         <main className="content">
           {activeTab?(
-            <TabViewer key={activeTab.id} tabData={activeTab.tab_data} tabId={activeTab.id} addToast={add}
+            <TabViewer key={activeTab.id??'fallback'} tabData={activeTab.tab_data} tabId={activeTab.id} addToast={add}
               onEditSave={newNotes=>setResult(prev=>({...prev,tabs:prev.tabs.map(t=>t.id===activeTab.id?{...t,tab_data:{...t.tab_data,notes:newNotes}}:t)}))}/>
           ):(
             <div className="empty">
