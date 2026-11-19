@@ -337,6 +337,44 @@ ifadeler (CORS `*`, `user_id=1`, `fretflow.service disabled`, oemer "henüz
 
 ---
 
+## 21. 2026-11-12 – 2026-11-19 — Tur 2 Düzeltmeleri ve Dağıtım
+
+### Birleşen ve dağıtılan PR'lar
+- **PR #13** (`0ff02b9`, 2026-11-12): `main.py` — tanınmayan dosyanın (fallback) örnek TAB'ı
+  önbelleğe alınmıyor, DB'ye yazılmıyor, `id/upload_id = None` dönüyor. Frontend: örnek TAB'da
+  oy ve düzenleme gizlendi (`TabViewer.jsx`, `TabList.jsx`, `App.jsx`). `.gitignore`: `.claude/worktrees/`.
+- **PR #14** (`acba31d`, 2026-11-19): yükleme boyutu 20 MB ile sınırlı (413); OMR
+  `asyncio.to_thread` ile çalışıyor; MusicXML/MIDI beat'i ölçü uzunluğunu çeyrek nota cinsinden
+  hesaplıyor (6/8 → 1..4); `.mxl` uzantısıyla parse; parse hatasında temp dosya siliniyor;
+  `_detect_treble_staffs` boş girdide `[]`; PDF önbellek hash'i tüm dosyadan; `io`, `subprocess`,
+  `process_image`, `_split_blob` kaldırıldı.
+- Merge kararları kullanıcıda (2026-11-19 onayı ile #14 birleştirildi).
+
+### Sunucu dağıtımı (2026-11-19, kullanıcı onayıyla)
+- Yedekler: `app/main.py.bak_20261119174029`, `app/services/omr_service.py.bak_20261119174029`.
+- Kontrol: sunucudaki `main.py` repo'nun `0ff02b9` sürümüyle aynıydı, yalnızca #13 bloğu eksikti.
+  Sunucudaki `omr_service.py` kodu repo ile aynıydı; fark 122 satır docstring/yorumdu. Yeni
+  dosya bu yorumları içermiyor (davranış değişmedi).
+- `fretflow.service` restart edildi (NRestarts=0). İlk `/health` denemesi 6 sn beklemeye
+  rağmen 000 döndü; birkaç saniye sonra 200 oldu. Servis başlangıcı beklenenden uzun sürüyor.
+- Doğrulama (127.0.0.1:8010): MusicXML yükleme 200 (`source=musicxml`); CORS preflight
+  (`selimkilic.online`) 200; tanınmayan dosya → `source=fallback`, `upload_id=None`;
+  21 MB → 413; son 3 dakikalık journal'da hata yok.
+- Sunucudaki `/opt/fretflow/.git` bu işte kullanılmadı; repo ile senkron değil.
+
+### Yerelde doğrulama
+- Test venv: `/tmp/fftest2` (uv ile; music21 9.1.0, numpy 1.26.4, OpenCV 4.9.0.80,
+  PyMuPDF 1.28.0, FastAPI TestClient, python-multipart, SQLite). Repoda kalıcı test yok.
+- 6/8 beat 1.0–3.5; 4/4 değişmedi; `.mxl` parse; bozuk XML → fallback; boş staff → `[]`;
+  20 MB+ → 413; boş PDF → fallback, çökme yok.
+
+### Açık kalanlar (tur 2)
+Bkz. BACKLOG.md "Tur 2 — açık bulgular". En önemlisi: PDF/görüntü yollarında `duration`
+hâlâ 1.0 (ritim tespiti yok); PDF yalnızca 1. sayfa ve en fazla 4 staff; A3-01 (X-Real-IP
+spoof, nginx yapılandırması repo dışı).
+
+---
+
 ## Debug Log / Dosya Envanteri (sunucuda)
 
 - `/tmp/omr_debug_log.txt` … `/tmp/omr_debug_log7.txt` — kronolojik debug

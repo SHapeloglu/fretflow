@@ -64,6 +64,46 @@ Aktif iş `TASK.md`'de (OMR kalite kararı: oemer 2/10 vs OpenCV 0/10; eşik ge�
 - **Neden:** `fretflow` `enabled`, ama sunucu reboot'u ile açılışın gerçekten kalktığı gözlemlenmedi.
 - **Notlar:** Sahibi onayıyla planlı bir pencerede yapılmalı; reboot sonrası `/health`, `systemctl is-active fretflow` ve `docker ps` kontrol edilmeli.
 
+## Tur 2 — açık bulgular (2026-11-19)
+
+Yüksek öncelikli olanlar PR #14 ile kapandı. Kalanlar (dosya:satır, 2026-11-19 kodu):
+
+### PDF/görüntü ritmi (duration ve beat)
+- **Kategori:** iyileştirme (en büyük doğruluk kazancı)
+- **Neden:** `PDFOMRService.process_pdf` (`omr_service.py` ~satır 580) ve `_build_music_data` `duration`'ı 1.0 yazıyor; beat sıralı sayılıyor. Tab'ın ritmi güvenilmez.
+- **Notlar:** Önce OMR ölçüm seti (aşağıdaki madde) kurulmalı.
+
+### PDF çok sayfalı ve staff sınırı
+- **Kategori:** iyileştirme
+- **Neden:** `doc[0]` (process_pdf) yalnızca 1. sayfa; `treble_staffs[:4]` (`_detect_treble_staffs` sonu) fazlasını atar.
+- **Notlar:** Sessiz kırpma; uyarı veya çoklu sayfa desteği gerekir.
+
+### PDF bellek ve süre limitleri
+- **Kategori:** dayanıklılık
+- **Neden:** 3x render (`get_pixmap` matrix 3.0) büyük sayfada bellek kullanır; render için boyut tavanı yok. tesseract çağrılarında (`_detect_tempo`, `_detect_time_signature`, `*_pdf` varyantları) timeout yok.
+- **Notlar:** `pytesseract` `timeout=` parametresi; render için piksel tavanı.
+
+### Akor ve nota elemesi
+- **Kategori:** iyileştirme
+- **Neden:** Aynı x konumundaki notalar tek nota sayılıyor (x-only dedupe, `_detect_notes_in_staff` ~711–715); pitch adımı sınırlanıyor (clamp, ~707–708). Hiçbiri test edilmedi.
+
+### Sabit anahtar `C` ve print loglama
+- **Kategori:** teknik borç
+- **Neden:** `'key': 'C'` her yolda sabit; `print(...)` ile hata yazılıyor (logging yok).
+
+### X-Real-IP güveni (A3-01)
+- **Kategori:** güvenlik
+- **Neden:** Rate limit `x-real-ip` başlığına güveniyor (`main.py` `rate_limit`). Başlığın nginx tarafından üzerine yazılıp yazılmadığı repo dışı nginx yapılandırmasında; doğrulanmadı.
+- **Notlar:** Sunucuda nginx `proxy_set_header X-Real-IP $remote_addr` kontrolü salt okunur yapılmalı.
+
+### Verifier gözlemi: autoflush
+- **Kategori:** araştırma
+- **Neden:** `database.py:7` `autoflush=False` olabilir; oylar skoru bir oy geride hesaplatıyor olabilir. Kanıtlanmadı.
+
+### Tur 2 ölçüm seti
+- **Kategori:** test
+- **Notlar:** Birkaç sayfalık referans PDF/PNG + beklenen pitch/süre listesi; pytest ile doğruluk. Repoda test yok; `/tmp/fftest_*.py` denetimleri kalıcı değil.
+
 ## Koddaki TODO / FIXME Notları
 
 _(kodda TODO/FIXME notu bulunamadı)_
