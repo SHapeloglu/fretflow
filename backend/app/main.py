@@ -5,6 +5,7 @@ Açılışta eksik tablolar oluşturulur. OMR ve TAB üretimi app.services, veri
 Bu dosyada kimlik doğrulama (giriş) yoktur.
 """
 
+import asyncio
 import time
 from collections import defaultdict
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Request
@@ -15,6 +16,9 @@ from app.core.database import get_db, engine
 from app.models.models import Base, SheetUpload, TabVersion, TabVote
 from app.services.omr_service import OMRService, GuitarMappingService, TrustScoreService
 from app.services.tab_renderer import render_tab
+
+# Yüklenen dosya için en büyük boyut (bayt). Bu sınırın üstü 413 döner; OMR belleği ve süresi bu değerle sınırlanır.
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
 # Eksik tabloları oluşturur, var olanlara dokunmaz. Tablo değişiklikleri (kolon ekleme vb.) bu yolla yapılmaz.
 Base.metadata.create_all(bind=engine, checkfirst=True)
@@ -85,8 +89,12 @@ async def upload_sheet(
     Aynı nota daha önce yüklendiyse kayıtlı TAB'ları döner (cache_hit=True). İlk yüklemede sistem TAB'ı üretip kaydeder.
     Tanınmayan ya da okunamayan dosyada örnek (fallback) veri döner.
     """
-    file_bytes = await file.read()
-    result = omr_svc.process_file(file_bytes, file.filename)
+    # Boyut sınırı: MAX_UPLOAD_BYTES + 1 bayt okunur; fazlası varsa dosya reddedilir.
+    file_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(file_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Dosya çok büyük (en fazla 20 MB)")
+    # OMR senkron ve ağır bir işlem; olay döngüsünü kilitlememesi için ayrı bir iş parçacığında çalışır.
+    result = await asyncio.to_thread(omr_svc.process_file, file_bytes, file.filename)
     music_hash = result["music_hash"]
     omr_data = result["omr_data"]
 
