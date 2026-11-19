@@ -13,8 +13,6 @@ Katman 2 (Sistem Üretilen): Fingering, String, Ritim ↓↑
 import hashlib
 import math
 import re
-import io
-import subprocess
 import tempfile
 import os
 from pathlib import Path
@@ -35,6 +33,15 @@ TREBLE_MAP = {
 }
 
 
+def _measure_quarters(time_sig: str) -> float:
+    """Ölçü uzunluğunu çeyrek nota cinsinden döndürür (4/4 → 4.0, 6/8 → 3.0)."""
+    try:
+        num, den = (int(x) for x in time_sig.split('/'))
+        return num * 4.0 / den
+    except (ValueError, ZeroDivisionError):
+        return 4.0
+
+
 class OMRService:
     """
     Hibrit OMR servisi.
@@ -48,7 +55,7 @@ class OMRService:
         ext = Path(filename).suffix.lower()
 
         if ext in ('.xml', '.musicxml', '.mxl'):
-            return self._parse_musicxml(file_bytes)
+            return self._parse_musicxml(file_bytes, suffix=ext if ext == '.mxl' else '.musicxml')
         elif ext in ('.mid', '.midi'):
             return self._parse_midi(file_bytes)
         elif ext == '.pdf':
@@ -60,7 +67,7 @@ class OMRService:
 
     # ── MusicXML Parser (en doğru yol) ───────────────────────────
 
-    def _parse_musicxml(self, file_bytes: bytes) -> dict:
+    def _parse_musicxml(self, file_bytes: bytes, suffix: str = '.musicxml') -> dict:
         """
         music21 ile MusicXML parse eder.
         Pitch, duration, tempo, time signature, key hepsini okur.
@@ -68,12 +75,13 @@ class OMRService:
         try:
             from music21 import converter, tempo as m21tempo, meter, key as m21key
 
-            with tempfile.NamedTemporaryFile(suffix='.musicxml', delete=False) as f:
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
                 f.write(file_bytes)
                 tmp_path = f.name
-
-            score = converter.parse(tmp_path)
-            os.unlink(tmp_path)
+            try:
+                score = converter.parse(tmp_path)
+            finally:
+                os.unlink(tmp_path)  # parse hata verse de geçici dosya silinir
 
             # Tempo
             tempo_val = 120
@@ -94,7 +102,7 @@ class OMRService:
             notes = []
             target_part = score.parts[0] if score.parts else score
             beat = 1.0
-            beats_per_measure = int(time_sig.split('/')[0])
+            measure_ql = _measure_quarters(time_sig)
 
             for element in target_part.flatten().notes:
                 # Tekli nota
@@ -103,7 +111,7 @@ class OMRService:
                     midi = element.pitch.midi
                     dur = float(element.duration.quarterLength)
                     offset = float(element.offset)
-                    beat = (offset % (beats_per_measure)) + 1.0
+                    beat = (offset % measure_ql) + 1.0
 
                     notes.append({
                         'pitch': pitch,
@@ -118,7 +126,7 @@ class OMRService:
                     midi = top.midi
                     dur = float(element.duration.quarterLength)
                     offset = float(element.offset)
-                    beat = (offset % beats_per_measure) + 1.0
+                    beat = (offset % measure_ql) + 1.0
 
                     notes.append({
                         'pitch': pitch,
@@ -153,9 +161,10 @@ class OMRService:
             with tempfile.NamedTemporaryFile(suffix='.mid', delete=False) as f:
                 f.write(file_bytes)
                 tmp_path = f.name
-
-            score = converter.parse(tmp_path)
-            os.unlink(tmp_path)
+            try:
+                score = converter.parse(tmp_path)
+            finally:
+                os.unlink(tmp_path)  # parse hata verse de geçici dosya silinir
 
             # Tempo
             tempo_val = 120
@@ -173,7 +182,7 @@ class OMRService:
                 time_sig = f'{ts.numerator}/{ts.denominator}'
 
             notes = []
-            beats_per_measure = int(time_sig.split('/')[0])
+            measure_ql = _measure_quarters(time_sig)
             target_part = score.parts[0] if score.parts else score
 
             for element in target_part.flatten().notes:
@@ -182,7 +191,7 @@ class OMRService:
                     midi = element.pitch.midi
                     dur = float(element.duration.quarterLength)
                     offset = float(element.offset)
-                    beat = (offset % beats_per_measure) + 1.0
+                    beat = (offset % measure_ql) + 1.0
                     notes.append({
                         'pitch': pitch, 'midi': midi,
                         'duration': dur, 'beat': round(beat, 2),
@@ -193,7 +202,7 @@ class OMRService:
                     notes.append({
                         'pitch': pitch, 'midi': top.midi,
                         'duration': float(element.duration.quarterLength),
-                        'beat': round((float(element.offset) % beats_per_measure) + 1.0, 2),
+                        'beat': round((float(element.offset) % measure_ql) + 1.0, 2),
                     })
 
             omr_data = {
@@ -434,12 +443,6 @@ class OMRService:
                    f"{'|'.join(seq)}")
         return hashlib.sha256(content.encode()).hexdigest()[:16]
 
-    # ── Geriye dönük uyumluluk ────────────────────────────────────
-
-    def process_image(self, image_bytes: bytes) -> dict:
-        """Eski PNG-only API ile uyumluluk için."""
-        return self._parse_image(image_bytes)
-
 
 # ── Guitar Mapping ────────────────────────────────────────────────
 
@@ -586,9 +589,9 @@ class PDFOMRService:
                 'notes': all_notes,
                 'source': 'pdf_omr',
             }
-            music_hash = hashlib.sha256(
-                '|'.join(f"{n['pitch']}" for n in all_notes).encode()
-            ).hexdigest()[:16]
+            # Hash dosyanın tamamından: yalnızca ilk sayfanın notalarından olsaydı
+            # sayfa 2+ farklı iki PDF aynı önbellek kaydını paylaşırdı.
+            music_hash = hashlib.sha256(file_bytes).hexdigest()[:16]
             return {'music_hash': music_hash, 'omr_data': omr_data}
 
         except Exception as e:
@@ -635,6 +638,8 @@ class PDFOMRService:
             return []
         h_lines = [l[0] for l in lines if abs(int(l[0][1])-int(l[0][3]))<4]
         raw_ys = sorted(set(int(l[1]) for l in h_lines))
+        if not raw_ys:
+            return []
         groups, group = [], [raw_ys[0]]
         for y in raw_ys[1:]:
             if y - group[-1] <= 8:
@@ -754,27 +759,3 @@ class PDFOMRService:
         except Exception:
             pass
         return '4/4'
-
-    def _split_blob(self, mask_roi, min_dist_frac=0.35):
-        """
-        Birbirine yapışmış/birleşmiş nota kafalarını distance-transform
-        ile ayırır. Her kafa merkezde daha 'kalın' olduğu için distance
-        transform tepe noktaları ayrı kafalara denk gelir.
-        Döndürür: [(cx, cy), ...] (mask_roi'nin lokal koordinatlarında)
-        """
-        if mask_roi.size == 0 or mask_roi.max() == 0:
-            return []
-        dist = cv2.distanceTransform(mask_roi, cv2.DIST_L2, 5)
-        m = dist.max()
-        if m <= 0:
-            return []
-        _, peaks = cv2.threshold(dist, m * min_dist_frac, 255, cv2.THRESH_BINARY)
-        peaks = peaks.astype(np.uint8)
-        n_labels, labels = cv2.connectedComponents(peaks)
-        centers = []
-        for lbl in range(1, n_labels):
-            ys, xs = np.where(labels == lbl)
-            if len(xs) < 3:
-                continue
-            centers.append((int(xs.mean()), int(ys.mean())))
-        return centers
