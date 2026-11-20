@@ -1,0 +1,3 @@
+# Geliştirme/test bağımlılıkları. Production'a (/opt/fretflow/venv) KURULMAZ.
+-r requirements.txt
+pytest==8.2.2
