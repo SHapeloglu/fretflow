@@ -2,7 +2,7 @@
 
 > Bu dosya `omr_service.py`'nin yapısını anlatır. Kod değiştikçe güncellenmeli.
 
-## Repo ve Kod Durumu (2026-11-11)
+## Repo ve Kod Durumu (2026-11-19)
 
 - Üretim kodu `backend/` altındadır (`backend/app/...`). Kök `app/` ve
   `smart-tab/` kaldırıldı (PR #1).
@@ -14,6 +14,9 @@
   - Swagger/OpenAPI kapalı (`docs_url=None`, `openapi_url=None`).
   - CORS allowlist (PR #7/#10): `fretflow.dehateknikservis.com` (pasif, bkz. SESSION §20),
     `selimkilic.online`, `localhost:5173`, `127.0.0.1:5173`; `allow_credentials=False`.
+  - Yükleme (`POST /api/upload`, PR #13/#14): 20 MB üstü 413 (`MAX_UPLOAD_BYTES`); OMR
+    `asyncio.to_thread` ile çalışır; `source == 'fallback'` ise önbellek ve DB atlanır,
+    `id`/`upload_id` `None` döner. PDF önbellek hash'i dosyanın tamamından (`sha256`) üretilir.
   - Oy (`POST /api/tab/{id}/vote`): tür `rate`/`accuracy`, değer 0–5; oy
     `user_id=NULL` ile yazılır (anonim). Kimlik doğrulama yok; tekrar oy engeli yok.
 - `SECRET_KEY` zorunludur (PR #4). `pymupdf==1.28.0` sabitli (PR #2).
@@ -23,11 +26,14 @@
   duruyor. `Base.metadata.create_all` yalnızca eksik tabloyu oluşturur; kolon
   eklemez (şema değişikliği için ALTER gerekir).
 - `backend/debug_omr.py` repoda da bulunur (eski notta yalnızca sunucudaydı).
+- Testler: `backend/tests/` (pytest, PR #16; `requirements-dev.txt`). `test_parsers.py` ve
+  `test_upload_api.py` parser ve API davranışını; `test_omr_accuracy.py` ise
+  `tests/omr_cases/manifest.json` ground truth'unu sınar. Vaka yoksa atlanır.
 - **Veritabanı bağlantısı (2026-11-09):** Uygulama `DATABASE_URL` ile Docker
   `postgres-ortak` (127.0.0.1:5434) içindeki `fretflow_db` veritabanına,
   `uygulama` rolüyle bağlanır. Yerel PostgreSQL 5432 kullanılmıyor. Ayrıntı: SESSION.md §19.
 - Servis katmanında `OMRService`, `GuitarMappingService`, `TrustScoreService`
-  ve `PDFOMRService` sınıfları vardır (dosya 780 satır).
+  ve `PDFOMRService` sınıfları vardır (dosya 761 satır, 2026-11-19).
 
 ### Parser hata davranışı
 
@@ -79,7 +85,7 @@ kütüphanesi) ile değiştirmek/desteklemek. oemer görüntüden doğrudan
 **MusicXML** üretir, ki bu zaten `_parse_musicxml()` üzerinden projeye
 bağlanabilir (o yol `music21` ile güvenilir çalışıyor). Böylece
 `PDFOMRService`'in çoğu (`_detect_treble_staffs`, `_group_staff_lines`,
-`_detect_notes_in_staff`, `find_blobs`, `_split_blob`, `TREBLE_MAP`)
+`_detect_notes_in_staff`, `find_blobs`, `TREBLE_MAP`)
 gereksiz hale gelebilir.
 
 **Önerilen hedef mimari (henüz uygulanmadı; oemer kurulumu çözüldü, ancak
@@ -126,7 +132,8 @@ yolunu da etkiler. Görüntü yolunun pitch doğruluğu ayrıca ölçülmedi.
 Metodlar (satır numaraları 2026-11-09 itibarıyla): `process_pdf` (544),
 `_group_staff_lines` (598), `_detect_treble_staffs` (623),
 `_detect_notes_in_staff` (677), `_detect_tempo_pdf` (726),
-`_detect_time_sig_pdf` (740), `_split_blob` (758).
+`_detect_time_sig_pdf` (740). `_split_blob` PR #14 ile kaldırıldı. Satır numaraları
+2026-11-09'a ait; güncel yer için fonksiyon adıyla arayın.
 
 `TREBLE_MAP` sözlüğü (hem modül seviyesinde hem `PDFOMRService` sınıfı
 içinde ayrı ayrı tanımlı — ikisi de düzeltildi), staff üzerindeki "step"
@@ -189,7 +196,7 @@ TREBLE_MAP = {
        return staves
    ```
 
-4. **`_detect_notes_in_staff(gray_raw, staff_ys, spacing)`** — satır 677'de
+4. **`_detect_notes_in_staff(gray_raw, staff_ys, spacing)`** — 2026-11-09'da satır 677'de
    başlıyor. `x_start = int(gray_raw.shape[1] * 0.15)` ile sol %15 (clef
    alanı) crop'tan atlanır — **tablo çıktılarındaki x, bu crop'un LOKAL
    koordinatı; FINAL nota listesindeki cx ise `cx+x_start` ile MUTLAK
@@ -232,9 +239,7 @@ TREBLE_MAP = {
    ama tam sayısal doğrulama (kabul kriteriyle) henüz yapılmadı (bkz.
    SESSION.md §14, TASK.md).
 
-5. **`_split_blob(mask_roi)`** (satır 758) — distance-transform tabanlı,
-   birleşmiş blob ayırma. Dosyada mevcut (doğrulandı) ama şu ana kadar
-   hiçbir gerçek örnekte tetiklenip fayda sağladığı gösterilmedi.
+5. ~~**`_split_blob(mask_roi)`**~~ — PR #14 ile kaldırıldı (çağıran yoktu).
 
 ### `GuitarMappingService`
 Katman 2: `omr_data`'daki notaları gitar string/fret/finger'a çevirir.

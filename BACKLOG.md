@@ -15,6 +15,7 @@ Aktif iş `TASK.md`'de (OMR kalite kararı: oemer 2/10 vs OpenCV 0/10; eşik ge�
 - **Kategori:** teknik borç / test
 - **Neden:** Şu an tek sayfa, tek 10 notalık ölçüm var (2026-11-09: oemer 2/10, OpenCV 0/10). Tek örnekle karar vermek güvenilir değil; `TREBLE_MAP` fix'inin tek başına etkisi de ölçülmedi.
 - **Notlar:** Referans PNG/PDF seti + beklenen pitch listesi → pytest ile doğruluk oranı; oemer ve OpenCV pipeline'ını aynı setle kıyasla.
+- **Durum (2026-11-24):** Harness PR #16 ile main'de (`backend/tests/test_omr_accuracy.py`). Vaka yok; ground truth bekleniyor.
 
 ### Bağımlılık izolasyonu
 - **Kategori:** teknik borç
@@ -102,7 +103,7 @@ Yüksek öncelikli olanlar PR #14 ile kapandı. Kalanlar (dosya:satır, 2026-11-
 
 ### Tur 2 ölçüm seti
 - **Kategori:** test
-- **Notlar:** Birkaç sayfalık referans PDF/PNG + beklenen pitch/süre listesi; pytest ile doğruluk. Repoda test yok; `/tmp/fftest_*.py` denetimleri kalıcı değil.
+- **Notlar:** Birkaç sayfalık referans PDF/PNG + beklenen pitch/süre listesi; pytest ile doğruluk. Harness PR #16 ile geldi; vaka ekleme kılavuzu `backend/tests/omr_cases/README.md`.
 
 ## Koddaki TODO / FIXME Notları
 

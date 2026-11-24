@@ -5,8 +5,9 @@
 - PR #13 ve PR #14 `main`'de; sunucuya dağıtıldı ve doğrulandı (SESSION.md §21).
 - Tur 2'nin yüksek öncelikli bulguları (upload sınırı, async OMR, IndexError, 6/8 beat,
   temp dosya, `.mxl`, PDF hash) kapandı.
-- Sıradaki iş: PDF/görüntü ritmi (`duration`) ve OMR ölçüm seti. Ölçüm seti olmadan ritim
-  koduna başlanmamalı.
+- PR #15 (dokümanlar) ve PR #16 (pytest altyapısı, 11 test) main'de.
+- Sıradaki iş: PDF/görüntü ritmi (`duration`). OMR ölçüm vakaları için ground truth
+  bekleniyor; olmadan ritim koduna başlanmamalı.
 - Sahip kararı bekleyenler: canlı DB verisi (users/votes 0), reboot testi, `fretflow.dehateknikservis.com`
   vhost/sertifika kararı, eski Docker `fretflow` container ve AutoSleep kaydı, `postgresql.service` wrapper.
 
