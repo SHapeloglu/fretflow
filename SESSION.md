@@ -364,7 +364,7 @@ ifadeler (CORS `*`, `user_id=1`, `fretflow.service disabled`, oemer "henüz
 
 ### Yerelde doğrulama
 - Test venv: `/tmp/fftest2` (uv ile; music21 9.1.0, numpy 1.26.4, OpenCV 4.9.0.80,
-  PyMuPDF 1.28.0, FastAPI TestClient, python-multipart, SQLite). Repoda kalıcı test yok.
+  PyMuPDF 1.28.0, FastAPI TestClient, python-multipart, SQLite). Kalıcı testler PR #16 ile eklendi (bkz. §22).
 - 6/8 beat 1.0–3.5; 4/4 değişmedi; `.mxl` parse; bozuk XML → fallback; boş staff → `[]`;
   20 MB+ → 413; boş PDF → fallback, çökme yok.
 
@@ -372,6 +372,21 @@ ifadeler (CORS `*`, `user_id=1`, `fretflow.service disabled`, oemer "henüz
 Bkz. BACKLOG.md "Tur 2 — açık bulgular". En önemlisi: PDF/görüntü yollarında `duration`
 hâlâ 1.0 (ritim tespiti yok); PDF yalnızca 1. sayfa ve en fazla 4 staff; A3-01 (X-Real-IP
 spoof, nginx yapılandırması repo dışı).
+
+---
+
+## 22. 2026-11-20 – 2026-11-24 — Test Altyapısı, Depo Onarımı, Doküman Denetimi
+
+- PR #15 (dokümanlar) ve PR #16 (pytest altyapısı) birleştirildi. `main` = `3222eee` → `fec4130`.
+- Test: `backend/requirements-dev.txt` (pytest 8.2.2); `cd backend && pytest` → 11 geçti, 1 atlandı (vaka yok).
+- **Depo onarımı:** `fec4130` commit objesi 0 bayt olmuştu. Objeyi silip `git fetch origin` ile geri aldım;
+  `git fsck` temiz. Aynı oturumda 7 test dosyası da 0 bayta düşmüştü; `HEAD`'den
+  `git checkout --` ile geri alındı. Kök neden kanıtlanmadı; yarıda kesilen işlemlerle uyumlu.
+- **uv önbelleği:** kesilmiş indirmelerden bozuk wheel'ler (`psycopg2-binary`, `pydantic-core`) kurulumu
+  bozdu. `uv cache clean` ile temizlendi, ortam yeniden kuruldu.
+- **Doküman denetimi (2026-11-24):** ARCHITECT (`_split_blob` kaldırıldı, yükleme davranışı, testler,
+  satır numaraları tarihli olarak işaretlendi), README (test komutları, PR #13/#14 çözümleri), TASK, BACKLOG ve
+  CLAUDE (pytest) güncellendi.
 
 ---
 

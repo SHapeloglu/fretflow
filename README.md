@@ -80,8 +80,8 @@ PDF'ten nota tespiti şu adımlarla yapılıyor:
    - Kontur tabanlı blob tespiti (`find_blobs`) nota kafalarını bulur.
    - Her blobun staff üzerindeki dikey konumu ("step") hesaplanır ve
      `TREBLE_MAP` sözlüğü ile nota ismine (`G4`, `D5` vb.) çevrilir.
-   - Birleşmiş nota kafaları `_split_blob()` ile distance-transform
-     kullanılarak ayrılmaya çalışılır.
+   - Birleşmiş nota kafalarını ayırma (`_split_blob`) kaldırıldı (PR #14, çağıran yoktu);
+     birleşmiş kafaların ayrılması açık bir konu (BACKLOG.md).
 
 Bu custom OpenCV heuristic'i **elle ayarlanmış sabit eşiklere** dayanıyor
 ve kırılgan olduğu tespit edildi (bkz. aşağıdaki bölüm). Bu yüzden paralel
@@ -109,6 +109,7 @@ planlanıyor.
 - **PyMuPDF** (`fitz`, `1.28.0`) — PDF → görüntü render
 - **music21** (`9.1.0`) — MusicXML/MIDI parse (en güvenilir yol)
 - **pytesseract** — tempo / time-signature OCR
+- **pytest** — yalnızca geliştirme (`backend/requirements-dev.txt`)
 - **SQLAlchemy** + **Alembic** + **psycopg2** — veritabanı katmanı
 - **Pydantic** / **pydantic-settings** — konfigürasyon ve veri doğrulama
 - **python-jose** + **passlib\[bcrypt\]** — requirements'ta, ama kimlik doğrulama henüz kodda yok
@@ -147,6 +148,16 @@ systemctl restart fretflow
 > (`/opt/oemer_venv`). Bu ikisini birbirine karıştırmamaya dikkat edin —
 > `oemer`'in bağımlılıkları (belirli `numpy`/`opencv`/`onnxruntime`
 > sürümleri) production'ın ihtiyaç duyduğu sürümlerle çakışıyor.
+
+Testler (geliştirme ortamında):
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+pytest
+```
+
+OMR kabul vakaları `backend/tests/omr_cases/` altında; şu an vaka yok (ground truth bekleniyor).
 
 ## Kullanım
 
@@ -188,6 +199,9 @@ print(result['omr_data']['notes'])
   `postgresql.service` bağımlılığı kaldırıldı, `docker.service` eklendi (2026-11-09).
 - **CORS** — `*` değil; allowlist (`selimkilic.online` dahil) (PR #7, #10).
 - **Anonim oylar** — `user_id=NULL` (PR #7); `user_id=1` sabiti kaldırıldı.
+- **Örnek (fallback) TAB** — önbelleğe alınmıyor, oy/düzenleme gizleniyor (PR #13).
+- **Yükleme ve OMR dayanıklılığı** — 20 MB sınırı, OMR thread'de, 6/8 beat, `.mxl`,
+  temp dosya temizliği, PDF önbellek hash'i (PR #14, 2026-11-19 sunucuya dağıtıldı).
 
 ### 🟡 Teyit bekleyen / açık
 

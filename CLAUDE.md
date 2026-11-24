@@ -104,6 +104,7 @@ hataya bir kez düşüldü (bkz. SESSION.md §16).
 - `music21==9.1.0` — MusicXML/MIDI parse (en güvenilir yol, dokunulmuyor)
 - `pytesseract` — tempo/time-signature OCR
 - SQLAlchemy + Alembic + psycopg2 — veritabanı katmanı
+- pytest — yalnızca geliştirme (`backend/requirements-dev.txt`, `cd backend && pytest`); production'a kurulmaz
 - python-jose + passlib[bcrypt] — requirements'ta; kimlik doğrulama henüz kodda yok
 - **Değerlendirilen alternatif:** `oemer` (deep-learning tabanlı OMR aracı,
   MusicXML üretir) — izole venv'de (`/opt/oemer_venv`) çalışıyor; tek sayfa
