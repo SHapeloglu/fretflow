@@ -401,7 +401,14 @@ spoof — 2026-11-25'te kapatıldı, bkz. §23).
 - **Nginx X-Real-IP (A3-01):** Sunucuda salt okunur kontrol. `selimkilic.online` vhost'unun `/api`
   bloğu `X-Real-IP` değerini üzerine yazıyor; A3-01 kapatıldı. Sunucuda değişiklik yapılmadı.
 - Test ortamı: `/tmp/fftest5` silinmişti; `/tmp/fftest6` (uv, Python 3.12, `requirements-dev.txt`) ile yeniden kuruldu.
-- Açık: PR #18 ve #19 merge onayı ve ayrı deploy onayı bekliyor.
+- **Merge:** PR #18, #19, #20 squash-merge edildi (`e1a47ac`, `e95e64a`, `3b0b8b7`); `main` testleri 15 passed, 1 skipped.
+- **Deploy (2026-11-25 12:40, onaylı):** `app/main.py` ve `app/services/omr_service.py` sunucuya kuruldu.
+  Yedekler: `*.bak_20261125124054`. `py_compile` ve `fretflow.service` restart OK; `/health` 200.
+  Boş PDF → fallback, DB'ye yazılmadı; 21 MiB yükleme → 413.
+- **Canlı vote doğrulaması:** Test TAB'ı (upload 6, TAB 6) ile `rate 4` ve `rate 2` oyları verildi;
+  DB'de `rate_score = 3.0`, `vote_count = 2`. Test kayıtları (upload 6, TAB 6, 2 oy) onayla silindi;
+  sonrasında 5 TAB, 5 upload, 0 oy kaldı.
+- Açık: OMR doğruluk ölçümü için referans nota (MusicXML) bekleniyor.
 
 ---
 
