@@ -92,10 +92,10 @@ Yüksek öncelikli olanlar PR #14 ile kapandı. Kalanlar (dosya:satır, 2026-11-
 - **Kategori:** teknik borç
 - **Neden:** `'key': 'C'` her yolda sabit; `print(...)` ile hata yazılıyor (logging yok).
 
-### X-Real-IP güveni (A3-01)
-- **Kategori:** güvenlik
-- **Neden:** Rate limit `x-real-ip` başlığına güveniyor (`main.py` `rate_limit`). Başlığın nginx tarafından üzerine yazılıp yazılmadığı repo dışı nginx yapılandırmasında; doğrulanmadı.
-- **Notlar:** Sunucuda nginx `proxy_set_header X-Real-IP $remote_addr` kontrolü salt okunur yapılmalı.
+### X-Real-IP güveni (A3-01) — kapatıldı (2026-11-25)
+- **Kategori:** güvenlik (kapatıldı)
+- **Neden:** Rate limit `x-real-ip` başlığına güveniyordu (`main.py` `rate_limit`). Sunucuda salt okunur kontrol edildi: `/etc/nginx/sites-enabled/selimkilic.online` içindeki `location /api` bloğu `proxy_set_header X-Real-IP $remote_addr;` ile istemcinin gönderdiği değeri üzerine yazıyor. Bu vhost üzerinden rate limit atlatılamaz.
+- **Açık not:** `/etc/nginx/sites-available/fretflow` dosyası ayrı bir domain için (`fretflow.dehateknikservis.com`) var; aktif olup olmadığı ve başlık ayarı doğrulanmadı. Domain kaldırılırsa bu dosya da temizlenmeli.
 
 ### Verifier gözlemi: autoflush
 - **Kategori:** araştırma
