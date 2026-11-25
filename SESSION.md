@@ -371,7 +371,7 @@ ifadeler (CORS `*`, `user_id=1`, `fretflow.service disabled`, oemer "henüz
 ### Açık kalanlar (tur 2)
 Bkz. BACKLOG.md "Tur 2 — açık bulgular". En önemlisi: PDF/görüntü yollarında `duration`
 hâlâ 1.0 (ritim tespiti yok); PDF yalnızca 1. sayfa ve en fazla 4 staff; A3-01 (X-Real-IP
-spoof, nginx yapılandırması repo dışı).
+spoof — 2026-11-25'te kapatıldı, bkz. §23).
 
 ---
 
@@ -387,6 +387,21 @@ spoof, nginx yapılandırması repo dışı).
 - **Doküman denetimi (2026-11-24):** ARCHITECT (`_split_blob` kaldırıldı, yükleme davranışı, testler,
   satır numaraları tarihli olarak işaretlendi), README (test komutları, PR #13/#14 çözümleri), TASK, BACKLOG ve
   CLAUDE (pytest) güncellendi.
+
+---
+
+## 23. 2026-11-25 — Vote skor fix, PDF render sınırı, nginx kontrolü
+
+- **Vote skor gecikmesi (PR #18, `fix/vote-flush-before-query`):** `SessionLocal` `autoflush=False` olduğu için
+  `vote_tab` yeni oyu flush etmeden sorguluyordu; skor bir oy geride kalıyordu. `db.flush()` eklendi;
+  `backend/tests/test_vote_scores.py` fix öncesi 2 testte kırmızı, sonrasında yeşil. `edit_tab`, `get_tab`
+  ve upload yolları incelendi: aynı hata yok.
+- **PDF render sınırı (PR #19, `fix/pdf-render-cap`):** `PDFOMRService._pdf_render_zoom` zoom'u
+  `MAX_RENDER_PIXELS = 25_000_000` bütçesiyle sınırlar (normal sayfa 3x). İki test eklendi.
+- **Nginx X-Real-IP (A3-01):** Sunucuda salt okunur kontrol. `selimkilic.online` vhost'unun `/api`
+  bloğu `X-Real-IP` değerini üzerine yazıyor; A3-01 kapatıldı. Sunucuda değişiklik yapılmadı.
+- Test ortamı: `/tmp/fftest5` silinmişti; `/tmp/fftest6` (uv, Python 3.12, `requirements-dev.txt`) ile yeniden kuruldu.
+- Açık: PR #18 ve #19 merge onayı ve ayrı deploy onayı bekliyor.
 
 ---
 
