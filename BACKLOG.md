@@ -99,7 +99,7 @@ Yüksek öncelikli olanlar PR #14 ile kapandı. Kalanlar (dosya:satır, 2026-11-
 
 ### Verifier gözlemi: autoflush (kapatıldı)
 - **Kategori:** hata (giderildi)
-- **Neden:** `database.py:7` `autoflush=False`; `vote_tab` yeni oyu flush etmeden sorguladığı için skor bir oy geride kalıyordu. Test: `backend/tests/test_vote_scores.py` (fix öncesi 2 kırmızı, sonrası yeşil). Düzeltme: `vote_tab` içinde `db.add(db_vote)` sonrası `db.flush()`. `edit_tab` / `get_tab` yolları ayrıca gözden geçirilmeli (açık).
+- **Neden:** `database.py:7` `autoflush=False`; `vote_tab` yeni oyu flush etmeden sorguladığı için skor bir oy geride kalıyordu. Test: `backend/tests/test_vote_scores.py` (fix öncesi 2 kırmızı, sonrası yeşil). Düzeltme: `vote_tab` içinde `db.add(db_vote)` sonrası `db.flush()`. `edit_tab` ve `get_tab` gözden geçirildi: yeni kayıttan sonra sorgu yapmıyor, aynı hata yok. Upload yolunda `add` sonrası `flush` zaten var.
 
 ### Tur 2 ölçüm seti
 - **Kategori:** test
