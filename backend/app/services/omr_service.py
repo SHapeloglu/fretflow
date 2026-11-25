@@ -23,6 +23,10 @@ import cv2
 
 # ── Müzik sabitleri ──────────────────────────────────────────────
 MIDI_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
+# PDF sayfası render edilirken en fazla bu kadar piksel (gri, ~25 MB). Büyük sayfalarda
+# zoom bu bütçeye göre düşürülür; böylece dev bir sayfa bellek tüketemez.
+MAX_RENDER_PIXELS = 25_000_000
+DEFAULT_RENDER_ZOOM = 3.0
 
 TREBLE_MAP = {
     -4:('A',3,57), -3:('B',3,59), -2:('C',4,60), -1:('D',4,62),
@@ -544,12 +548,21 @@ class PDFOMRService:
         12:('C',6,84),
     }
 
+    @staticmethod
+    def _pdf_render_zoom(width_pt: float, height_pt: float) -> float:
+        """Sayfa boyutuna göre render zoom'u: varsayılan 3x, ama piksel bütçesini aşmaz."""
+        area = max(width_pt * height_pt, 1.0)
+        limit = math.sqrt(MAX_RENDER_PIXELS / area)
+        return min(DEFAULT_RENDER_ZOOM, limit)
+
     def process_pdf(self, file_bytes: bytes) -> dict:
         import fitz, hashlib
         try:
             doc = fitz.open(stream=file_bytes, filetype='pdf')
+            rect = doc[0].rect
+            zoom = self._pdf_render_zoom(rect.width, rect.height)
             pix = doc[0].get_pixmap(
-                matrix=fitz.Matrix(3.0, 3.0),
+                matrix=fitz.Matrix(zoom, zoom),
                 colorspace=fitz.csGRAY
             )
             img_bytes = pix.tobytes('png')
