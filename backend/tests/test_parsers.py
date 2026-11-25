@@ -77,3 +77,17 @@ def test_blank_pdf_falls_back(svc):
     doc.new_page()
     r = svc.process_file(doc.tobytes(), "blank.pdf")
     assert r["omr_data"]["source"] == "fallback"
+
+
+def test_pdf_render_zoom_keeps_normal_pages_at_3x():
+    # A4 (595x842 pt) normal sayfada zoom değişmez: 3x.
+    from app.services.omr_service import PDFOMRService
+    assert PDFOMRService._pdf_render_zoom(595, 842) == 3.0
+
+
+def test_pdf_render_zoom_caps_huge_pages():
+    # Çok büyük sayfada render piksel bütçesini aşmamalı.
+    from app.services.omr_service import MAX_RENDER_PIXELS, PDFOMRService
+    zoom = PDFOMRService._pdf_render_zoom(20000, 20000)
+    assert zoom < 3.0
+    assert (20000 * zoom) * (20000 * zoom) <= MAX_RENDER_PIXELS * 1.0001
