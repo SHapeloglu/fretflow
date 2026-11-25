@@ -97,9 +97,9 @@ Yüksek öncelikli olanlar PR #14 ile kapandı. Kalanlar (dosya:satır, 2026-11-
 - **Neden:** Rate limit `x-real-ip` başlığına güveniyor (`main.py` `rate_limit`). Başlığın nginx tarafından üzerine yazılıp yazılmadığı repo dışı nginx yapılandırmasında; doğrulanmadı.
 - **Notlar:** Sunucuda nginx `proxy_set_header X-Real-IP $remote_addr` kontrolü salt okunur yapılmalı.
 
-### Verifier gözlemi: autoflush
-- **Kategori:** araştırma
-- **Neden:** `database.py:7` `autoflush=False` olabilir; oylar skoru bir oy geride hesaplatıyor olabilir. Kanıtlanmadı.
+### Verifier gözlemi: autoflush (kapatıldı)
+- **Kategori:** hata (giderildi)
+- **Neden:** `database.py:7` `autoflush=False`; `vote_tab` yeni oyu flush etmeden sorguladığı için skor bir oy geride kalıyordu. Test: `backend/tests/test_vote_scores.py` (fix öncesi 2 kırmızı, sonrası yeşil). Düzeltme: `vote_tab` içinde `db.add(db_vote)` sonrası `db.flush()`. `edit_tab` / `get_tab` yolları ayrıca gözden geçirilmeli (açık).
 
 ### Tur 2 ölçüm seti
 - **Kategori:** test

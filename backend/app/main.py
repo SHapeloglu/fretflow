@@ -260,6 +260,9 @@ async def vote_tab(tab_id: int, vote: dict, db: Session = Depends(get_db), _hiz=
         user_level_weight=weight,
     )
     db.add(db_vote)
+    # autoflush kapalı (database.py): yeni oy flush edilmezse aşağıdaki sorguda görünmez
+    # ve skor bir oy geriden hesaplanır.
+    db.flush()
 
     all_votes = db.query(TabVote).filter(TabVote.tab_id == tab_id).all()
     rate_votes = [v for v in all_votes if v.vote_type == "rate"]
